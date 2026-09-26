@@ -20,11 +20,13 @@ export function createDriverRoutes(
 
   router.post(
     "/",
+    requireInternalService,
     asyncHandler(controller.createDriver)
   );
 
   router.put(
     "/:id",
+    requireInternalService,
     asyncHandler(controller.updateDriver)
   );
 
