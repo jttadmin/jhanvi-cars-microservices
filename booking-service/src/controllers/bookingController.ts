@@ -211,11 +211,13 @@ export class BookingController {
       }
 
       const data =
-        req.internalService
+        req.internalService ||
+        req.auth?.role === "ADMIN"
           ? result.data
           : {
               ...result.data,
-              userId: existing.userId
+              userId: existing.userId,
+              driverId: existing.driverId
             };
 
       const booking =
