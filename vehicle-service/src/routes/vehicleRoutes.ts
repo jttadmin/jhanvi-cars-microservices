@@ -1,0 +1,60 @@
+import {
+  Router
+} from "express";
+
+import {
+  VehicleController
+} from "../controllers/vehicleController";
+
+import {
+  asyncHandler
+} from "../middleware/asyncHandler";
+
+import {
+  requireInternalService
+} from "../middleware/internalAuth";
+
+export function createVehicleRoutes(
+  controller: VehicleController
+): Router {
+
+  const router = Router();
+
+  router.get(
+    "/",
+    asyncHandler(
+      controller.getAllVehicles
+    )
+  );
+
+  router.get(
+    "/:id",
+    asyncHandler(
+      controller.getVehicleById
+    )
+  );
+
+  router.post(
+    "/",
+    asyncHandler(
+      controller.createVehicle
+    )
+  );
+
+  router.put(
+    "/:id",
+    asyncHandler(
+      controller.updateVehicle
+    )
+  );
+
+  router.patch(
+    "/:id/status",
+    requireInternalService,
+    asyncHandler(
+      controller.updateVehicleStatus
+    )
+  );
+
+  return router;
+}
