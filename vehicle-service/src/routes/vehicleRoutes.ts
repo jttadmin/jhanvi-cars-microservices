@@ -36,6 +36,7 @@ export function createVehicleRoutes(
 
   router.post(
     "/",
+    requireInternalService,
     asyncHandler(
       controller.createVehicle
     )
@@ -43,6 +44,7 @@ export function createVehicleRoutes(
 
   router.put(
     "/:id",
+    requireInternalService,
     asyncHandler(
       controller.updateVehicle
     )
