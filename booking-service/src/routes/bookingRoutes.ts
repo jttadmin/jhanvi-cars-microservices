@@ -59,6 +59,20 @@ export function createBookingRoutes(
     )
   );
   router.patch(
+    "/:id/start",
+    asyncHandler(
+      controller.startBooking
+    )
+  );
+
+  router.patch(
+    "/:id/complete",
+    asyncHandler(
+      controller.completeBooking
+    )
+  );
+
+  router.patch(
     "/:id/status",
     asyncHandler(
       controller.updateBookingStatus

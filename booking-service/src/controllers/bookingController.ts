@@ -435,4 +435,219 @@ export class BookingController {
 
       return res.json(updated);
     };
+
+  startBooking =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      if (req.auth?.role !== "DRIVER") {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Only drivers can start bookings"
+          });
+      }
+
+      const id =
+        String(req.params.id);
+
+      const booking =
+        await this.service
+          .getBookingById(id);
+
+      if (!booking) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Booking not found"
+          });
+      }
+
+      if (booking.status !== "CONFIRMED") {
+        return res
+          .status(409)
+          .json({
+            message:
+              `Booking cannot be started from ${booking.status} status`
+          });
+      }
+
+      if (!booking.driverId) {
+        return res
+          .status(409)
+          .json({
+            message:
+              "Booking has no assigned driver"
+          });
+      }
+
+      const authenticatedDriverUserId =
+        req.auth?.id;
+
+      if (!authenticatedDriverUserId) {
+        return res
+          .status(401)
+          .json({
+            message:
+              "Unauthorized"
+          });
+      }
+
+      const driver =
+        await getDriverByUserId(
+          authenticatedDriverUserId
+        );
+
+      if (!driver) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Authenticated driver is not registered"
+          });
+      }
+
+      if (driver.id !== booking.driverId) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Booking is assigned to another driver"
+          });
+      }
+
+      if (!driver.isAvailable) {
+        return res
+          .status(409)
+          .json({
+            message:
+              "Driver is not available"
+          });
+      }
+
+      const updated =
+        await this.service
+          .updateBookingStatus(
+            id,
+            "ONGOING"
+          );
+
+      if (!updated) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Booking not found"
+          });
+      }
+
+      return res.json(updated);
+    };
+
+  completeBooking =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      if (req.auth?.role !== "DRIVER") {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Only drivers can complete bookings"
+          });
+      }
+
+      const id =
+        String(req.params.id);
+
+      const booking =
+        await this.service
+          .getBookingById(id);
+
+      if (!booking) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Booking not found"
+          });
+      }
+
+      if (booking.status !== "ONGOING") {
+        return res
+          .status(409)
+          .json({
+            message:
+              `Booking cannot be completed from ${booking.status} status`
+          });
+      }
+
+      if (!booking.driverId) {
+        return res
+          .status(409)
+          .json({
+            message:
+              "Booking has no assigned driver"
+          });
+      }
+
+      const authenticatedDriverUserId =
+        req.auth?.id;
+
+      if (!authenticatedDriverUserId) {
+        return res
+          .status(401)
+          .json({
+            message:
+              "Unauthorized"
+          });
+      }
+
+      const driver =
+        await getDriverByUserId(
+          authenticatedDriverUserId
+        );
+
+      if (!driver) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Authenticated driver is not registered"
+          });
+      }
+
+      if (driver.id !== booking.driverId) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Booking is assigned to another driver"
+          });
+      }
+
+      const updated =
+        await this.service
+          .updateBookingStatus(
+            id,
+            "COMPLETED"
+          );
+
+      if (!updated) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Booking not found"
+          });
+      }
+
+      return res.json(updated);
+    };
 }
