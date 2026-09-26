@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createDriverSchema = z.object({
   id: z.string().min(1),
+  userId: z.string().min(1).nullable().optional(),
   name: z.string().min(2),
   email: z.string().email(),
   phone: z.string().min(10).max(15),
@@ -11,6 +12,7 @@ export const createDriverSchema = z.object({
 });
 
 export const updateDriverSchema = z.object({
+  userId: z.string().min(1).nullable().optional(),
   name: z.string().min(2),
   email: z.string().email(),
   phone: z.string().min(10).max(15),
