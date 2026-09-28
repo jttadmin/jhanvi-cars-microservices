@@ -360,6 +360,26 @@ export default function CustomerDashboard({
     }
   }
 
+  function handleSwapLocations() {
+    if (!pickup && !destination) return;
+
+    const previousPickup = pickup;
+    const previousDestination = destination;
+
+    setPickup(previousDestination);
+    setDestination(previousPickup);
+    setRoute(null);
+    setRouteError(null);
+
+    if (pickupInputRef.current) {
+      pickupInputRef.current.value = previousDestination?.address ?? '';
+    }
+
+    if (destInputRef.current) {
+      destInputRef.current.value = previousPickup?.address ?? '';
+    }
+  }
+
   async function handleBook() {
     if (!pickup || !destination || !route || booking) return;
 
@@ -825,8 +845,7 @@ export default function CustomerDashboard({
           <div className="booking-heading">
             <div>
               <span className="eyebrow">BOOK A RIDE</span>
-              <h1>Where would you like to go?</h1>
-              <p>Choose your pickup and destination to get started.</p>
+
             </div>
 
             <button
@@ -842,16 +861,24 @@ export default function CustomerDashboard({
           {placesError && <p className="error-text">{placesError}</p>}
 
           <div className="location-stack">
-            <label className="location-box">
+            <label className={`location-box ${pickup ? 'has-value' : ''}`}>
               <span className="location-icon pickup-icon">●</span>
+
               <span className="location-copy">
-                <small>Pickup location</small>
+                <small>Pickup</small>
                 <input
                   ref={pickupInputRef}
-                  placeholder="Search pickup location"
+                  placeholder="Where should we pick you up?"
                   autoComplete="off"
+                  aria-label="Pickup location"
                 />
+                {pickup && (
+                  <span className="location-selected">
+                    {pickup.address}
+                  </span>
+                )}
               </span>
+
               {pickup && (
                 <button
                   className="clear-location"
@@ -863,25 +890,45 @@ export default function CustomerDashboard({
                       pickupInputRef.current.value = '';
                     }
                   }}
-                  aria-label="Clear pickup"
+                  aria-label="Clear pickup location"
+                  title="Clear pickup location"
                 >
                   ×
                 </button>
               )}
             </label>
 
-            <div className="route-connector" />
+            <div className="route-connector">
+              <button
+                className="swap-location"
+                type="button"
+                onClick={handleSwapLocations}
+                disabled={!pickup && !destination}
+                aria-label="Swap pickup and destination"
+                title="Swap pickup and destination"
+              >
+                ⇅
+              </button>
+            </div>
 
-            <label className="location-box">
+            <label className={`location-box ${destination ? 'has-value' : ''}`}>
               <span className="location-icon destination-icon">●</span>
+
               <span className="location-copy">
                 <small>Destination</small>
                 <input
                   ref={destInputRef}
-                  placeholder="Search destination"
+                  placeholder="Where are you going?"
                   autoComplete="off"
+                  aria-label="Destination"
                 />
+                {destination && (
+                  <span className="location-selected">
+                    {destination.address}
+                  </span>
+                )}
               </span>
+
               {destination && (
                 <button
                   className="clear-location"
@@ -894,6 +941,7 @@ export default function CustomerDashboard({
                     }
                   }}
                   aria-label="Clear destination"
+                  title="Clear destination"
                 >
                   ×
                 </button>
@@ -974,15 +1022,25 @@ export default function CustomerDashboard({
           {bookError && <p className="error-text">{bookError}</p>}
 
           <button
-            className="primary-book-button"
+            className={`primary-book-button ${booking ? 'is-booking' : ''}`}
             disabled={!route || routeLoading || booking}
             onClick={handleBook}
           >
-            {booking
-        ? 'Booking your ride…'
-        : fare
-          ? `Book ${rideOptions.find((option) => option.type === rideType)?.label ?? 'ride'} · ₹${fare}`
-          : 'Book ride'}
+            {booking ? (
+              <>
+                <span className="book-spinner" aria-hidden="true" />
+                <span>Booking your ride…</span>
+              </>
+            ) : (
+              <>
+                <span>
+                  {fare
+                    ? `Book ${rideOptions.find((option) => option.type === rideType)?.label ?? 'ride'} · ₹${fare}`
+                    : 'Book ride'}
+                </span>
+                <span className="book-arrow" aria-hidden="true">→</span>
+              </>
+            )}
           </button>
 
           {!user && (
