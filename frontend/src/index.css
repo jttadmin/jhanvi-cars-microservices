@@ -1,0 +1,382 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+  --ink: #14171f;
+  --paper: #fbf9f4;
+  --yellow: #ffc53d;
+  --teal: #1f6f5c;
+  --slate: #5b6070;
+  --line: #e7e1d2;
+  --danger: #c9463c;
+
+  --font-display: 'Bricolage Grotesque', 'Manrope', sans-serif;
+  --font-body: 'Manrope', 'Segoe UI', sans-serif;
+
+  --radius-card: 20px;
+  --radius-pill: 999px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------- Shared header (both dashboards) ---------- */
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.role-pill {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--teal);
+  background: rgba(31, 111, 92, 0.12);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.logout-button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.logout-button:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ---------- Text helpers ---------- */
+
+.hint-text {
+  font-size: 13.5px;
+  color: var(--slate);
+  margin: 6px 0;
+}
+
+.error-text {
+  font-size: 13.5px;
+  color: var(--danger);
+  margin: 6px 0;
+}
+
+/* ---------- Location dot markers (search fields + ride list) ---------- */
+
+.location-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.location-dot.pickup {
+  background: var(--teal);
+}
+
+.location-dot.destination {
+  border-radius: 3px;
+  background: var(--ink);
+}
+
+/* ---------- Buttons ---------- */
+
+.book-button {
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px 22px;
+  margin-top: 14px;
+  box-shadow: 0 10px 22px -10px rgba(255, 197, 61, 0.7);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.book-button:hover:not(:disabled) {
+  background: #ffb81c;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px -10px rgba(255, 197, 61, 0.85);
+}
+
+.book-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 6px 14px -8px rgba(255, 197, 61, 0.6);
+}
+
+.book-button:disabled {
+  box-shadow: none;
+}
+
+.book-button:disabled {
+  background: var(--line);
+  color: var(--slate);
+}
+
+/* ---------- Rides list (used by both dashboards) ---------- */
+
+.rides-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rides-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rides-tabs button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--slate);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.rides-tabs button:hover:not(.active) {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.rides-tabs button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.rides-total {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--slate);
+}
+
+.rides-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ride-row {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.ride-row:hover {
+  border-color: transparent;
+  box-shadow: 0 8px 20px -12px rgba(20, 23, 31, 0.25);
+}
+
+.ride-route {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+}
+
+.ride-point {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ride-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.ride-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ride-actions button {
+  border: none;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  transition: background 0.12s ease, transform 0.1s ease;
+}
+
+.ride-actions button:hover:not(:disabled) {
+  background: #185a4a;
+}
+
+.ride-actions button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.ride-actions button:disabled {
+  background: var(--line);
+  color: var(--slate);
+}
+
+.status-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  color: var(--slate);
+}
+
+.status-pill.status-pending {
+  background: rgba(255, 197, 61, 0.35);
+  color: #7a5b06;
+}
+
+.status-pill.status-confirmed,
+.status-pill.status-ongoing {
+  background: rgba(31, 111, 92, 0.15);
+  color: var(--teal);
+}
+
+.status-pill.status-completed {
+  background: rgba(20, 23, 31, 0.08);
+  color: var(--ink);
+}
+
+.status-pill.status-cancelled {
+  background: rgba(201, 70, 60, 0.12);
+  color: var(--danger);
+}
+
+/* ---------- Summary rows (fare / distance / duration / earnings) ---------- */
+
+.summary-label {
+  display: block;
+  font-size: 12px;
+  color: var(--slate);
+}
+
+.summary-value {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.summary-value.fare {
+  color: var(--teal);
+}
+
+/* ---------- Google map wrapper (shared by both dashboards) ---------- */
+
+.ride-map-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ride-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--slate);
+  background: var(--paper);
+}

@@ -34,3 +34,10 @@ Thumbs.db
 # Local service credentials
 internal_service_token
 **/test-secrets.json
+
+# Local backups / archives
+frontend-backup/
+*.bak
+*.zip
+scripts/fix_nginx_bookings.py
+.git-backup-*/

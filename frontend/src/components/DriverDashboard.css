@@ -1,0 +1,447 @@
+.driver-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.driver-body {
+  flex: 1;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.driver-profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: #fff;
+  box-shadow: 0 10px 28px -18px rgba(20, 23, 31, 0.35);
+}
+
+.driver-profile-card .panel-heading {
+  margin: 0;
+  font-size: 18px;
+}
+
+.vehicle-line {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--slate);
+}
+
+.availability-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.toggle-switch {
+  width: 46px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--line);
+  position: relative;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+
+.toggle-switch .toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.toggle-switch.on {
+  background: var(--teal);
+}
+
+.toggle-switch.on .toggle-knob {
+  transform: translateX(20px);
+}
+
+.earnings-card {
+  display: flex;
+  gap: 24px;
+  margin-top: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, rgba(31, 111, 92, 0.06), rgba(255, 197, 61, 0.08));
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 10px 5px 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.profile-button-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.profile-chevron {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  width: 290px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.14);
+}
+
+.profile-dropdown-title {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.profile-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.profile-detail span {
+  color: var(--muted);
+}
+
+.profile-detail strong {
+  max-width: 175px;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-logout {
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* ── Premium driver dashboard ───────────────────────── */
+
+.driver-screen {
+  background:
+    radial-gradient(circle at 85% 8%, rgba(31, 111, 92, 0.08), transparent 28%),
+    radial-gradient(circle at 10% 35%, rgba(255, 197, 61, 0.07), transparent 24%),
+    var(--paper);
+}
+
+.driver-body {
+  max-width: 860px;
+  padding: 26px 22px 34px;
+  gap: 16px;
+}
+
+.driver-profile-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 40px -28px rgba(20, 23, 31, 0.45);
+  backdrop-filter: blur(10px);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.driver-profile-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--teal);
+}
+
+.driver-profile-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 45px -28px rgba(20, 23, 31, 0.5);
+}
+
+.driver-profile-card .panel-heading {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.vehicle-line {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.availability-toggle {
+  padding: 7px 10px 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+}
+
+.toggle-switch {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(20, 23, 31, 0.05);
+}
+
+.toggle-switch.on {
+  background: var(--teal);
+  box-shadow: 0 4px 14px rgba(31, 111, 92, 0.25);
+}
+
+.earnings-card {
+  margin-top: 0;
+  padding: 18px 22px;
+  border-radius: 18px;
+  border-color: rgba(31, 111, 92, 0.12);
+  box-shadow: 0 12px 32px -25px rgba(20, 23, 31, 0.4);
+}
+
+.profile-button {
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.profile-button:hover {
+  border-color: rgba(31, 111, 92, 0.35);
+  transform: translateY(-1px);
+}
+
+.profile-avatar {
+  box-shadow: 0 3px 10px rgba(20, 23, 31, 0.12);
+}
+
+.profile-dropdown {
+  border-color: rgba(20, 23, 31, 0.08);
+  box-shadow: 0 22px 55px rgba(20, 23, 31, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.profile-logout {
+  border-radius: 10px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.profile-logout:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .driver-body {
+    padding: 16px 14px 26px;
+  }
+
+  .driver-profile-card {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .availability-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .earnings-card {
+    padding: 15px 17px;
+    gap: 16px;
+    border-radius: 16px;
+  }
+
+  .profile-button-name {
+    max-width: 90px;
+  }
+
+  .profile-dropdown {
+    right: -4px;
+    width: min(290px, calc(100vw - 28px));
+  }
+}
+
+
+/* ── Premium profile dropdown button ───────────────── */
+
+.profile-button {
+  position: relative;
+  gap: 9px;
+  min-height: 42px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid rgba(20, 23, 31, 0.10);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 5px 16px -10px rgba(20, 23, 31, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.profile-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 111, 92, 0.28);
+  background: #fff;
+  box-shadow:
+    0 9px 22px -12px rgba(20, 23, 31, 0.5),
+    0 0 0 3px rgba(31, 111, 92, 0.05);
+}
+
+.profile-button:active {
+  transform: translateY(0);
+}
+
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 2px solid #fff;
+  background: linear-gradient(145deg, var(--yellow), #f4b72f);
+  box-shadow:
+    0 3px 10px rgba(20, 23, 31, 0.16),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+}
+
+.profile-button-name {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.profile-chevron {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: rgba(20, 23, 31, 0.045);
+  color: var(--slate);
+  font-size: 13px;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.profile-button:hover .profile-chevron {
+  background: rgba(31, 111, 92, 0.09);
+  color: var(--teal);
+}
+
+/* Make the open menu feel attached to the button */
+.profile-dropdown {
+  margin-top: 2px;
+  border: 1px solid rgba(20, 23, 31, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 22px 55px -22px rgba(20, 23, 31, 0.28),
+    0 4px 14px -8px rgba(20, 23, 31, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+
+.profile-button {
+  min-width: 168px;
+  height: 44px;
+  padding: 5px 8px 5px 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(20, 23, 31, 0.08);
+  background: linear-gradient(180deg, #ffffff, #f8faf9);
+  box-shadow:
+    0 7px 18px -10px rgba(20, 23, 31, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  border: 2px solid #fff;
+  background: linear-gradient(145deg, #ffc53d, #f3ad20);
+  box-shadow:
+    0 3px 9px rgba(20, 23, 31, 0.18),
+    inset 0 1px 2px rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+}
+
+.profile-button-name {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.profile-chevron {
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border: 1px solid rgba(20, 23, 31, 0.07);
+  background: #f4f6f5;
+  color: var(--ink);
+  font-size: 12px;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.profile-button:hover .profile-chevron {
+  background: rgba(31, 111, 92, 0.09);
+  color: var(--teal);
+}
+
+
+.profile-chevron {
+  display: none;
+}
+
