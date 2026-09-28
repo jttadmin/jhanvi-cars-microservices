@@ -61,7 +61,13 @@ export default function App() {
   }
 
   if (user.role === 'CUSTOMER') {
-    return <CustomerDashboard user={user} onLogout={handleLogout} />;
+    return (
+      <CustomerDashboard
+        user={user}
+        onLogout={handleLogout}
+        onUserUpdated={setUser}
+      />
+    );
   }
 
   if (user.role === 'DRIVER') {

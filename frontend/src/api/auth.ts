@@ -16,6 +16,13 @@ interface MeResponse {
   };
 }
 
+function normalizeAuthUser(user: AuthUser & { fullName?: string }): AuthUser {
+  return {
+    ...user,
+    name: user.name ?? user.fullName,
+  };
+}
+
 export async function register(input: {
   name: string;
   email: string;
@@ -40,7 +47,7 @@ export async function register(input: {
   });
 
   setToken(response.data.token);
-  return response.data.user;
+  return normalizeAuthUser(response.data.user);
 }
 
 export async function login(input: {
@@ -54,14 +61,26 @@ export async function login(input: {
   });
 
   setToken(response.data.token);
-  return response.data.user;
+  return normalizeAuthUser(response.data.user);
 }
 
 export async function getMe(): Promise<AuthUser> {
   const response = await apiRequest<MeResponse>('/auth/me');
-  return response.data.user;
+  return normalizeAuthUser(response.data.user);
 }
 
 export function logout(): void {
   clearToken();
+}
+
+export async function updateProfile(input: {
+  email?: string;
+  mobileNumber?: string;
+}): Promise<AuthUser> {
+  const response = await apiRequest<MeResponse>('/auth/me', {
+    method: 'PUT',
+    body: input,
+  });
+
+  return normalizeAuthUser(response.data.user);
 }

@@ -7,6 +7,7 @@ import { cancelBooking, createBooking, getBookings } from '../api/bookings';
 import { estimateFare, type RideType } from '../utils/fare';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
+import { updateProfile } from '../api/auth';
 import type { AuthUser, Booking, LocationPoint, RouteResult } from '../types';
 import './CustomerDashboard.css';
 
@@ -14,6 +15,7 @@ interface CustomerDashboardProps {
   user?: AuthUser;
   onLogout?: () => void;
   onRequireAuth?: () => void;
+  onUserUpdated?: (user: AuthUser) => void;
 }
 
 
@@ -95,6 +97,7 @@ export default function CustomerDashboard({
   user,
   onLogout,
   onRequireAuth,
+  onUserUpdated,
 }: CustomerDashboardProps) {
   const pickupInputRef = useRef<HTMLInputElement>(null);
   const destInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +118,13 @@ export default function CustomerDashboard({
   const [ridesError, setRidesError] = useState<string | null>(null);
   const [rideType, setRideType] = useState<RideType>('ECONOMY');
   const [showHistory, setShowHistory] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileMobile, setProfileMobile] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [cancellingRideId, setCancellingRideId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -393,6 +403,74 @@ export default function CustomerDashboard({
 
   const visibleRides = showHistory ? historyRides : activeRides;
 
+  const openProfile = () => {
+    if (!user) return;
+
+    setProfileEmail(user.email ?? '');
+    setProfileMobile(user.mobileNumber ?? '');
+    setProfileError(null);
+    setProfileSuccess(null);
+    setProfileMenuOpen(false);
+    setProfileOpen(true);
+  };
+
+  const closeProfile = () => {
+    if (profileSaving) return;
+
+    setProfileOpen(false);
+    setProfileError(null);
+    setProfileSuccess(null);
+  };
+
+  const handleProfileSave = async () => {
+    if (!user) return;
+
+    const email = profileEmail.trim();
+    const mobileNumber = profileMobile.trim();
+
+    if (!email) {
+      setProfileError('Email address is required.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setProfileError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!/^[0-9]{10}$/.test(mobileNumber)) {
+      setProfileError('Mobile number must be exactly 10 digits.');
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    try {
+      const updatedUser = await updateProfile({
+        email,
+        mobileNumber,
+      });
+
+      onUserUpdated?.(updatedUser);
+
+      setProfileEmail(updatedUser.email ?? '');
+      setProfileMobile(updatedUser.mobileNumber ?? '');
+      setProfileSuccess('Profile updated successfully.');
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to update your profile. Please try again.';
+
+      setProfileError(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  
   return (
     <div className="customer-app">
       <header className="customer-topbar">
@@ -415,23 +493,95 @@ export default function CustomerDashboard({
 
         <div className="customer-account">
           {user ? (
-            <>
-              <div className="account-avatar">
-                {(user.name || 'C').slice(0, 1).toUpperCase()}
-              </div>
-              <div className="account-copy">
-                <strong>{user.name || 'Customer'}</strong>
-                <span>Customer</span>
-              </div>
+            <div className="account-profile-wrap">
               <button
-                className="account-menu"
-                onClick={onLogout}
-                title="Log out"
-                aria-label="Log out"
+                type="button"
+                className="account-trigger"
+                onClick={() => setProfileMenuOpen((open) => !open)}
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
               >
-                ⋮
+                <div className="account-avatar">
+                  {(user.name || 'C').slice(0, 1).toUpperCase()}
+                </div>
+
+                <div className="account-copy">
+                  <strong>{user.name || 'Customer'}</strong>
+                  <span>Customer</span>
+                </div>
+
+                <span className={`account-chevron ${profileMenuOpen ? 'open' : ''}`}>
+                 ⌄
+                </span>
               </button>
-            </>
+
+              {profileMenuOpen && (
+                <div className="profile-dropdown" role="menu">
+                  <div className="profile-dropdown-header">
+                    <div className="profile-dropdown-avatar">
+                      {(user.name || 'C').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{user.name || 'Customer'}</strong>
+                      <span>{user.email}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={openProfile}
+                  >
+                    <span>👤</span>
+                    <span>
+                      <strong>My Profile</strong>
+                      <small>Personal information</small>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    <span>💳</span>
+                    <span>
+                      <strong>My Wallet</strong>
+                      <small>Coming soon</small>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="profile-menu-item"
+                    onClick={() => {
+                      setShowHistory(true);
+                      setProfileMenuOpen(false);
+                    }}
+                  >
+                    <span>🚕</span>
+                    <span>
+                      <strong>My Rides</strong>
+                      <small>Ride history</small>
+                    </span>
+                  </button>
+
+                  <div className="profile-menu-divider" />
+
+                  <button
+                    type="button"
+                    className="profile-menu-item logout-item"
+                    onClick={onLogout}
+                  >
+                    <span>↪</span>
+                    <span>
+                      <strong>Logout</strong>
+                      <small>Sign out of Jhanvi Cars</small>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <button className="guest-login" onClick={onRequireAuth}>
               Log in
@@ -439,6 +589,236 @@ export default function CustomerDashboard({
           )}
         </div>
       </header>
+
+      {profileOpen && user && (
+        <div
+          className="profile-overlay customer-profile-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeProfile();
+            }
+          }}
+        >
+          <section
+            className="customer-profile-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="customer-profile-title"
+          >
+            {/* Header */}
+            <div className="customer-profile-header">
+              <div>
+                <span className="customer-profile-kicker">ACCOUNT</span>
+                <h2 id="customer-profile-title">My Profile</h2>
+                <p>Your Jhanvi Cars account</p>
+              </div>
+
+              <button
+                type="button"
+                className="customer-profile-close"
+                onClick={closeProfile}
+                disabled={profileSaving}
+                aria-label="Close profile"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Identity */}
+            <div className="customer-profile-identity">
+              <div className="customer-profile-avatar">
+                {(user.name || 'C').slice(0, 1).toUpperCase()}
+              </div>
+
+              <div className="customer-profile-identity-copy">
+                <div className="customer-profile-name-row">
+                  <h3>{user.name || 'Customer'}</h3>
+                  <span className="customer-profile-status">
+                    <span />
+                    Active
+                  </span>
+                </div>
+
+                <p>{user.email || 'Customer account'}</p>
+
+                <div className="customer-profile-member">
+                  <span className="customer-profile-member-icon">✓</span>
+                  <span>Jhanvi Cars customer</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick navigation */}
+            <div className="customer-profile-quick-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  closeProfile();
+                  setShowHistory(true);
+                }}
+              >
+                <span className="customer-profile-quick-icon">↗</span>
+                <span>
+                  <strong>My rides</strong>
+                  <small>View ride history</small>
+                </span>
+                <span className="customer-profile-chevron">›</span>
+              </button>
+
+              <button type="button" disabled>
+                <span className="customer-profile-quick-icon">♙</span>
+                <span>
+                  <strong>Account security</strong>
+                  <small>Password & security</small>
+                </span>
+                <span className="customer-profile-soon">Soon</span>
+              </button>
+            </div>
+
+            {/* Personal details */}
+            <div className="customer-profile-section">
+              <div className="customer-profile-section-heading">
+                <div>
+                  <span className="customer-profile-section-kicker">
+                    PERSONAL
+                  </span>
+                  <h3>Personal details</h3>
+                </div>
+                <span className="customer-profile-edit-label">
+                  Editable
+                </span>
+              </div>
+
+              <div className="customer-profile-fields">
+                <div className="customer-profile-field customer-profile-field-readonly">
+                  <div className="customer-profile-field-icon">A</div>
+                  <div className="customer-profile-field-content">
+                    <label>Full name</label>
+                    <strong>{user.name || 'Not available'}</strong>
+                  </div>
+                  <span className="customer-profile-lock">Locked</span>
+                </div>
+
+                <label className="customer-profile-field">
+                  <div className="customer-profile-field-icon">@</div>
+                  <div className="customer-profile-field-content">
+                    <span>Email address</span>
+                    <input
+                      type="email"
+                      value={profileEmail}
+                      onChange={(event) => setProfileEmail(event.target.value)}
+                      disabled={profileSaving}
+                      autoComplete="email"
+                    />
+                  </div>
+                </label>
+
+                <label className="customer-profile-field">
+                  <div className="customer-profile-field-icon">☎</div>
+                  <div className="customer-profile-field-content">
+                    <span>Mobile number</span>
+                    <input
+                      type="tel"
+                      value={profileMobile}
+                      onChange={(event) =>
+                        setProfileMobile(
+                          event.target.value.replace(/\D/g, '').slice(0, 10),
+                        )
+                      }
+                      disabled={profileSaving}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={10}
+                    />
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Wallet */}
+            <div className="customer-profile-wallet">
+              <div className="customer-profile-wallet-top">
+                <div className="customer-profile-wallet-icon">₹</div>
+
+                <div>
+                  <span>JHANVI WALLET</span>
+                  <strong>₹0.00</strong>
+                </div>
+
+                <span className="customer-profile-wallet-badge">
+                  Coming soon
+                </span>
+              </div>
+
+              <div className="customer-profile-wallet-bottom">
+                <span>
+                  Use your wallet for faster and easier ride payments.
+                </span>
+
+                <button type="button" disabled>
+                  Add money
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            {profileError && (
+              <div className="customer-profile-message customer-profile-error" role="alert">
+                <span>!</span>
+                {profileError}
+              </div>
+            )}
+
+            {profileSuccess && (
+              <div className="customer-profile-message customer-profile-success" role="status">
+                <span>✓</span>
+                {profileSuccess}
+              </div>
+            )}
+
+            {/* Privacy note */}
+            <div className="customer-profile-privacy">
+              <span className="customer-profile-privacy-icon">✓</span>
+              <div>
+                <strong>Your information is secure</strong>
+                <p>
+                  Your personal details are only used to manage your Jhanvi Cars
+                  account and rides.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="customer-profile-footer">
+              <button
+                type="button"
+                className="customer-profile-cancel"
+                onClick={closeProfile}
+                disabled={profileSaving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="customer-profile-save"
+                onClick={handleProfileSave}
+                disabled={profileSaving}
+              >
+                {profileSaving ? (
+                  <>
+                    <span className="customer-profile-spinner" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <main className="customer-content">
         <section className="booking-card">

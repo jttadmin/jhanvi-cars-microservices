@@ -30,7 +30,7 @@ export function setSessionExpiredHandler(handler: SessionExpiredHandler): void {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** Set false for register/login, which run before a token exists. */
   auth?: boolean;
