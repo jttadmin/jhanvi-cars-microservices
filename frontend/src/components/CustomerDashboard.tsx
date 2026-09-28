@@ -3,7 +3,7 @@ import BrandMark from './BrandMark';
 import { RideIcon } from './RideIcons';
 import GoogleRideMap from './GoogleRideMap';
 import { loadGoogleMaps, attachAutocomplete, computeRoute } from '../api/googleMaps';
-import { createBooking, getBookings } from '../api/bookings';
+import { cancelBooking, createBooking, getBookings } from '../api/bookings';
 import { estimateFare, type RideType } from '../utils/fare';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
@@ -115,6 +115,7 @@ export default function CustomerDashboard({
   const [ridesError, setRidesError] = useState<string | null>(null);
   const [rideType, setRideType] = useState<RideType>('ECONOMY');
   const [showHistory, setShowHistory] = useState(false);
+  const [cancellingRideId, setCancellingRideId] = useState<string | null>(null);
 
   useEffect(() => {
     let pickupAutocomplete: google.maps.places.Autocomplete | undefined;
@@ -321,6 +322,32 @@ export default function CustomerDashboard({
         maximumAge: 30000,
       },
     );
+  }
+
+  async function handleCancelRide(bookingId: string) {
+    if (cancellingRideId) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this ride?',
+    );
+
+    if (!confirmed) return;
+
+    setCancellingRideId(bookingId);
+    setRidesError(null);
+
+    try {
+      await cancelBooking(bookingId);
+      await loadRides();
+    } catch (err) {
+      setRidesError(
+        err instanceof ApiError
+          ? err.message
+          : 'Could not cancel your ride. Please try again.',
+      );
+    } finally {
+      setCancellingRideId(null);
+    }
   }
 
   async function handleBook() {
@@ -675,8 +702,10 @@ export default function CustomerDashboard({
                         type="button"
                         className="cancel-look"
                         aria-label="Cancel ride"
+                        disabled={cancellingRideId === ride.id}
+                        onClick={() => handleCancelRide(ride.id)}
                       >
-                        Cancel
+                        {cancellingRideId === ride.id ? 'Cancelling…' : 'Cancel'}
                       </button>
                     )}
                   </div>

@@ -35,6 +35,11 @@ export async function completeBooking(id: string): Promise<Booking> {
   return apiRequest<Booking>(`/bookings/${id}/complete`, { method: 'PATCH' });
 }
 
-// Cancellation isn't wired up: the brief mentions it but no endpoint was
-// given (no PATCH /api/bookings/:id/cancel in the contract). Add it here
-// once the backend exposes one — don't invent the path in the meantime.
+export async function cancelBooking(id: string): Promise<Booking> {
+  return apiRequest<Booking>(`/bookings/${id}/status`, {
+    method: 'PATCH',
+    body: {
+      status: 'CANCELLED',
+    },
+  });
+}
