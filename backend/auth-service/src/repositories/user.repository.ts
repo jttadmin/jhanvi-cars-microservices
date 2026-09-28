@@ -13,6 +13,11 @@ export interface CreateUserInput {
   role: UserRole;
 }
 
+export interface UpdateUserInput {
+  email?: string;
+  mobileNumber?: string;
+}
+
 export const userRepository = {
   async findByEmail(email: string): Promise<UserRecord | undefined> {
     return getDb()<UserRecord>(TABLE).where({ email }).first();
@@ -26,6 +31,28 @@ export const userRepository = {
 
   async findById(id: string): Promise<UserRecord | undefined> {
     return getDb()<UserRecord>(TABLE).where({ id }).first();
+  },
+
+  async updateById(id: string, input: UpdateUserInput): Promise<UserRecord> {
+    const updates: Record<string, string> = {};
+
+    if (input.email !== undefined) {
+      updates.email = input.email;
+    }
+
+    if (input.mobileNumber !== undefined) {
+      updates.mobile_number = input.mobileNumber;
+    }
+
+    const [row] = await getDb()<UserRecord>(TABLE)
+      .where({ id })
+      .update({
+        ...updates,
+        updated_at: getDb().fn.now(),
+      })
+      .returning('*');
+
+    return row;
   },
 
   async create(input: CreateUserInput): Promise<UserRecord> {

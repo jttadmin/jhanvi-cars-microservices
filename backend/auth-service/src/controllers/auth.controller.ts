@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { authService } from '../services/auth.service';
-import { loginSchema, registerSchema } from '../validators/auth.validator';
+import {
+  loginSchema,
+  registerSchema,
+  updateProfileSchema,
+} from '../validators/auth.validator';
 import { UnauthorizedError } from '../errors/AppError';
 
 // Controllers only: parse/validate input, call the service, shape the
@@ -21,6 +25,22 @@ export const authController = {
       const input = loginSchema.parse(req.body);
       const result = await authService.login(input);
       res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.auth) {
+        throw new UnauthorizedError('Not authenticated');
+      }
+
+      const input = updateProfileSchema.parse(req.body);
+      const user = await authService.updateProfile(req.auth.sub, input);
+
+      res.status(200).json({ success: true, data: { user } });
     } catch (err) {
       next(err);
     }

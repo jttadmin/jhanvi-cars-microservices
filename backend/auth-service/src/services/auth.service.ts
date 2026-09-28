@@ -2,7 +2,11 @@ import bcrypt from 'bcrypt';
 import { ConflictError, NotFoundError, UnauthorizedError } from '../errors/AppError';
 import { toPublicUser, PublicUser } from '../models/user.model';
 import { userRepository } from '../repositories/user.repository';
-import { RegisterInput, LoginInput } from '../validators/auth.validator';
+import {
+  RegisterInput,
+  LoginInput,
+  UpdateProfileInput,
+} from '../validators/auth.validator';
 import { tokenProvider } from './token.service';
 import { initializeUserProfile } from './user-profile.client';
 import { createDriverProfile } from './driver-profile.client';
@@ -70,6 +74,43 @@ export const authService = {
 
     const token = await tokenProvider.issue({ sub: existing.id, role: existing.role });
     return { user: toPublicUser(existing), token };
+  },
+
+
+  async updateProfile(
+    userId: string,
+    input: UpdateProfileInput,
+  ): Promise<PublicUser> {
+    const currentUser = await userRepository.findById(userId);
+
+    if (!currentUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    if (input.email !== undefined && input.email !== currentUser.email) {
+      const existingEmail = await userRepository.findByEmail(input.email);
+
+      if (existingEmail && existingEmail.id !== userId) {
+        throw new ConflictError('Email is already registered');
+      }
+    }
+
+    if (
+      input.mobileNumber !== undefined &&
+      input.mobileNumber !== currentUser.mobile_number
+    ) {
+      const existingMobile = await userRepository.findByMobileNumber(
+        input.mobileNumber,
+      );
+
+      if (existingMobile && existingMobile.id !== userId) {
+        throw new ConflictError('Mobile number is already registered');
+      }
+    }
+
+    const updated = await userRepository.updateById(userId, input);
+
+    return toPublicUser(updated);
   },
 
   async getById(userId: string): Promise<PublicUser> {

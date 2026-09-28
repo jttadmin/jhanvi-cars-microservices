@@ -20,3 +20,16 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const updateProfileSchema = z.object({
+  email: z.string().email().optional(),
+  mobileNumber: z
+    .string()
+    .regex(/^[0-9]{10}$/, 'mobileNumber must be exactly 10 digits')
+    .optional(),
+}).refine(
+  (data) => data.email !== undefined || data.mobileNumber !== undefined,
+  { message: 'At least one profile field must be provided' },
+);
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

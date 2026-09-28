@@ -5,6 +5,7 @@ export interface AuthUser {
   role: Role;
   name?: string;
   email?: string;
+  mobileNumber?: string;
   // Present for DRIVER accounts if /api/auth/me returns it. If your backend
   // exposes vehicle info from a different endpoint, wire that up in
   // api/drivers.ts instead of guessing at a new one here.
