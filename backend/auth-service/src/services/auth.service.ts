@@ -42,9 +42,14 @@ export const authService = {
     });
 
     if (created.role === 'DRIVER') {
-      if (!input.licenseNumber || !input.vehicleNumber) {
+      if (
+        !input.licenseNumber ||
+        !input.vehicleNumber ||
+        !input.vehicleType ||
+        !input.vehicleModel
+      ) {
         throw new ConflictError(
-          'Driver registration requires licenseNumber and vehicleNumber',
+          'Driver registration requires licenseNumber, vehicleNumber, vehicleType and vehicleModel',
         );
       }
 
@@ -55,6 +60,8 @@ export const authService = {
         mobileNumber: created.mobile_number,
         licenseNumber: input.licenseNumber,
         vehicleNumber: input.vehicleNumber,
+        vehicleType: input.vehicleType,
+        vehicleModel: input.vehicleModel,
       });
     }
 
@@ -62,9 +69,11 @@ export const authService = {
   },
 
   async login(input: LoginInput): Promise<{ user: PublicUser; token: string }> {
-    const existing = await userRepository.findByEmail(input.email);
+    const existing = input.identifier.includes('@')
+      ? await userRepository.findByEmail(input.identifier)
+      : await userRepository.findByMobileNumber(input.identifier);
     if (!existing) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError("Account doesn't exist. Please sign up.");
     }
 
     const passwordMatches = await bcrypt.compare(input.password, existing.password_hash);

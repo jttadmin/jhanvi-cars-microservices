@@ -181,7 +181,17 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
                 </div>
 
                 <div className="profile-detail">
-                  <span>Vehicle</span>
+                  <span>Vehicle type</span>
+                  <strong>{driverProfile?.vehicleType ?? '—'}</strong>
+                </div>
+
+                <div className="profile-detail">
+                  <span>Vehicle model</span>
+                  <strong>{driverProfile?.vehicleModel ?? '—'}</strong>
+                </div>
+
+                <div className="profile-detail">
+                  <span>Vehicle number</span>
                   <strong>{driverProfile?.vehicleNumber ?? '—'}</strong>
                 </div>
 

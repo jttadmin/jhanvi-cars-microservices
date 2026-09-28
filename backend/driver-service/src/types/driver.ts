@@ -1,3 +1,9 @@
+export type VehicleType =
+  | "AUTO"
+  | "ECONOMY"
+  | "COMFORT"
+  | "COMFORT_PLUS";
+
 export interface Driver {
   id: string;
   userId?: string | null;
@@ -6,5 +12,7 @@ export interface Driver {
   phone: string;
   licenseNumber: string;
   vehicleNumber: string;
+  vehicleType: VehicleType;
+  vehicleModel: string;
   isAvailable: boolean;
 }

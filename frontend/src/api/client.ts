@@ -71,7 +71,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError('Network error — check your connection and try again.', 0);
   }
 
-  if (response.status === 401) {
+  if (response.status === 401 && auth) {
     clearToken();
     onSessionExpired?.();
     throw new ApiError(USER_MESSAGES[401], 401);

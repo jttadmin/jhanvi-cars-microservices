@@ -12,11 +12,15 @@ export const registerSchema = z.object({
   role: z.enum(['CUSTOMER', 'DRIVER', 'ADMIN']).optional().default('CUSTOMER'),
   licenseNumber: z.string().min(1).optional(),
   vehicleNumber: z.string().min(1).optional(),
+  vehicleType: z
+    .enum(['AUTO', 'ECONOMY', 'COMFORT', 'COMFORT_PLUS'])
+    .optional(),
+  vehicleModel: z.string().min(2).optional(),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1),
   password: z.string().min(1),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
