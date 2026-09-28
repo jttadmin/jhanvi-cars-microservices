@@ -7,6 +7,8 @@ interface CreateDriverProfileInput {
   mobileNumber: string;
   licenseNumber: string;
   vehicleNumber: string;
+  vehicleType: 'AUTO' | 'ECONOMY' | 'COMFORT' | 'COMFORT_PLUS';
+  vehicleModel: string;
 }
 
 export async function createDriverProfile(
@@ -38,6 +40,8 @@ export async function createDriverProfile(
         phone: input.mobileNumber,
         licenseNumber: input.licenseNumber,
         vehicleNumber: input.vehicleNumber,
+        vehicleType: input.vehicleType,
+        vehicleModel: input.vehicleModel,
         isAvailable: false,
       }),
     });

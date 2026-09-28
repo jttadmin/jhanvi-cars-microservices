@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AuthModal from './components/AuthModal';
 import CustomerDashboard from './components/CustomerDashboard';
+import Footer from './components/Footer';
 import DriverDashboard from './components/DriverDashboard';
 import { getMe, logout as clearSession } from './api/auth';
 import { getToken, setSessionExpiredHandler } from './api/client';
@@ -41,46 +42,47 @@ export default function App() {
     return <div className="app-loading">Loading…</div>;
   }
 
-  if (!user) {
-    return (
-      <>
-        <CustomerDashboard
-          onRequireAuth={() => setAuthOpen(true)}
-        />
-        {authOpen && (
-          <AuthModal
-            onAuthenticated={(authenticatedUser) => {
-              setUser(authenticatedUser);
-              setAuthOpen(false);
-            }}
-            onClose={() => setAuthOpen(false)}
-          />
-        )}
-      </>
-    );
-  }
-
-  if (user.role === 'CUSTOMER') {
-    return (
-      <CustomerDashboard
-        user={user}
-        onLogout={handleLogout}
-        onUserUpdated={setUser}
-      />
-    );
-  }
-
-  if (user.role === 'DRIVER') {
-    return <DriverDashboard user={user} onLogout={handleLogout} />;
-  }
-
-  // ADMIN — no dashboard built yet, but routing is ready for it.
   return (
-    <div className="admin-placeholder">
-      <p>Admin dashboard is coming soon.</p>
-      <button className="logout-button" onClick={handleLogout}>
-        Logout
-      </button>
+    <div className="app-shell">
+      <main className="app-content">
+        {!user ? (
+          <>
+            <CustomerDashboard
+              onRequireAuth={() => setAuthOpen(true)}
+            />
+            {authOpen && (
+              <AuthModal
+                onAuthenticated={(authenticatedUser) => {
+                  setUser(authenticatedUser);
+                  setAuthOpen(false);
+                }}
+                onClose={() => setAuthOpen(false)}
+              />
+            )}
+          </>
+        ) : user.role === 'CUSTOMER' ? (
+          <CustomerDashboard
+            user={user}
+            onLogout={handleLogout}
+            onUserUpdated={setUser}
+          />
+        ) : user.role === 'DRIVER' ? (
+          <DriverDashboard
+            user={user}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <div className="admin-placeholder">
+            <p>Admin dashboard is coming soon.</p>
+            <button className="logout-button" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        )}
+      </main>
+
+      <Footer />
     </div>
   );
+
 }

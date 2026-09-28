@@ -31,6 +31,8 @@ export async function register(input: {
   mobileNumber: string;
   licenseNumber?: string;
   vehicleNumber?: string;
+  vehicleType?: 'AUTO' | 'ECONOMY' | 'COMFORT' | 'COMFORT_PLUS';
+  vehicleModel?: string;
 }): Promise<AuthUser> {
   const response = await apiRequest<AuthResponse>('/auth/register', {
     method: 'POST',
@@ -42,6 +44,8 @@ export async function register(input: {
       mobileNumber: input.mobileNumber,
       licenseNumber: input.licenseNumber,
       vehicleNumber: input.vehicleNumber,
+      vehicleType: input.vehicleType,
+      vehicleModel: input.vehicleModel,
     },
     auth: false,
   });
@@ -51,7 +55,7 @@ export async function register(input: {
 }
 
 export async function login(input: {
-  email: string;
+  identifier: string;
   password: string;
 }): Promise<AuthUser> {
   const response = await apiRequest<AuthResponse>('/auth/login', {

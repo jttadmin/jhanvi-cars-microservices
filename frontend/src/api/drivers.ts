@@ -21,6 +21,8 @@ export interface DriverProfile {
   phone: string;
   licenseNumber: string;
   vehicleNumber: string;
+  vehicleType: 'AUTO' | 'ECONOMY' | 'COMFORT' | 'COMFORT_PLUS';
+  vehicleModel: string;
   isAvailable: boolean;
 }
 

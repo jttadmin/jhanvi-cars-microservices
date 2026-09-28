@@ -23,11 +23,12 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--ink);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .auth-close {
@@ -121,8 +122,10 @@
     max-width: 460px;
     margin: 0;
     border-radius: 0;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 60px 64px;
+    overflow-y: auto;
+    min-height: 0;
   }
 }
 
@@ -195,4 +198,2211 @@
   font-weight: 600;
   margin-top: 14px;
   padding: 0;
+}
+
+.auth-hero-title .hero-title-main {
+  display: block;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+/* JHANVI AUTH REFERENCE OVERRIDES - START */
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(420px, 0.95fr);
+  background: #071019;
+  overflow: hidden;
+}
+
+.auth-hero {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 58px 7%;
+  background:
+    radial-gradient(circle at 70% 42%, rgba(255,186,42,.13), transparent 28%),
+    radial-gradient(circle at 28% 75%, rgba(20,184,150,.12), transparent 30%),
+    linear-gradient(135deg, #06101a 0%, #0b1822 48%, #10251f 100%);
+}
+
+.auth-hero::before {
+  content: "";
+  position: absolute;
+  inset: 34% 0 0;
+  background: linear-gradient(to top, rgba(5,11,17,.98), rgba(5,11,17,.05));
+  pointer-events: none;
+}
+
+.auth-hero::after {
+  content: "";
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: 7%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #e7a82b, #ffbf3f, transparent);
+  transform: rotate(-2deg);
+  box-shadow: 0 0 22px rgba(255,184,48,.5);
+}
+
+.auth-hero-brand {
+  position: relative;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.8px;
+}
+
+.auth-hero-brand .brand { color: #fff; }
+
+.auth-hero-copy {
+  position: relative;
+  z-index: 5;
+  margin-top: 72px;
+  max-width: 720px;
+}
+
+.auth-hero-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: clamp(52px, 5vw, 86px);
+  line-height: .98;
+  letter-spacing: -3px;
+  font-weight: 850;
+}
+
+.auth-hero-title .hero-title-main {
+  display: block;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.auth-hero-title .hero-title-accent {
+  display: block;
+  color: #ffbe32;
+}
+
+.auth-hero-line {
+  max-width: 650px;
+  margin: 26px 0 0;
+  color: rgba(255,255,255,.82);
+  font-size: clamp(18px, 1.5vw, 26px);
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.auth-vehicle-types {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  gap: 18px;
+  margin-top: 38px;
+}
+
+.auth-vehicle-card {
+  width: 112px;
+  height: 105px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 20px;
+  background: rgba(10,19,27,.55);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 15px 35px rgba(0,0,0,.2);
+}
+
+.auth-vehicle-card span { font-size: 30px; }
+.auth-vehicle-card strong { color: #fff; font-size: 15px; font-weight: 700; }
+
+.auth-hero-route {
+  position: absolute;
+  z-index: 4;
+  right: 7%;
+  top: 29%;
+  width: min(460px, 42%);
+  opacity: .95;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 20;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  padding: 70px 58px 55px;
+  overflow-y: auto;
+  background: linear-gradient(145deg, rgba(255,255,255,.99), rgba(249,247,242,.99));
+  border-radius: 42px 0 0 42px;
+  box-shadow: -25px 0 70px rgba(0,0,0,.28);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.auth-close {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: #e3e4e7;
+  color: #202938;
+  font-size: 30px;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.auth-close:hover {
+  transform: rotate(90deg);
+  background: #d8d9dd;
+}
+
+.auth-title {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(34px, 3vw, 48px);
+  line-height: 1.05;
+  font-weight: 850;
+  letter-spacing: -1.8px;
+}
+
+.auth-subtitle {
+  margin: 12px 0 34px;
+  color: #858b9c;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.auth-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+  color: #7e8596;
+  font-size: 0;
+}
+
+.auth-field input,
+.auth-field select {
+  width: 100%;
+  height: 62px;
+  box-sizing: border-box;
+  padding: 0 22px;
+  border: 1px solid #dedfe4;
+  border-radius: 18px;
+  outline: none;
+  background: rgba(255,255,255,.82);
+  color: #252c3b;
+  font-size: 17px;
+  font-weight: 500;
+  transition: .2s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.02);
+}
+
+.auth-field input::placeholder { color: #8b91a1; }
+
+.auth-field input:focus,
+.auth-field select:focus {
+  border-color: #f4b82f;
+  box-shadow: 0 0 0 4px rgba(244,184,47,.12);
+}
+
+.auth-role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 16px 0 22px;
+}
+
+.auth-role-toggle button {
+  height: 60px;
+  border-radius: 18px;
+  border: 1px solid #e1e1e5;
+  background: #fff;
+  color: #262d3b;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.auth-role-toggle button:hover { border-color: #f3bb39; }
+
+.auth-role-toggle button.active {
+  background: #202020;
+  color: #fff;
+  border-color: #202020;
+  box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+.auth-role-toggle button:last-child.active { color: #ffc039; }
+
+.auth-card .book-button {
+  width: 100%;
+  height: 68px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 34px;
+  background: linear-gradient(90deg, #ffbd35, #ffc844);
+  color: #111827;
+  font-size: 21px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(255,190,55,.25);
+  transition: .2s ease;
+}
+
+.auth-card .book-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 35px rgba(255,190,55,.35);
+}
+
+.auth-switch {
+  margin-top: 25px;
+  text-align: center;
+  color: #858b9c;
+  font-size: 17px;
+}
+
+.auth-switch button {
+  border: 0;
+  background: transparent;
+  color: #179f89;
+  font-weight: 800;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .auth-overlay { grid-template-columns: 1fr 430px; }
+  .auth-hero { padding-left: 42px; padding-right: 30px; }
+  .auth-card { padding-left: 38px; padding-right: 38px; }
+  .auth-hero-title { font-size: 54px; }
+}
+
+@media (max-width: 899px) {
+  .auth-overlay {
+    display: block;
+    overflow-y: auto;
+    background: #f9f7f2;
+  }
+
+  .auth-hero {
+    min-height: 360px;
+    padding: 32px 26px 45px;
+  }
+
+  .auth-hero-copy { margin-top: 45px; }
+
+  .auth-hero-title {
+    font-size: 48px;
+    letter-spacing: -2px;
+  }
+
+  .auth-hero-line { font-size: 17px; }
+
+  .auth-hero-route {
+    width: 260px;
+    right: 0;
+    top: 38%;
+  }
+
+  .auth-vehicle-types { gap: 10px; }
+
+  .auth-vehicle-card {
+    width: 88px;
+    height: 82px;
+    border-radius: 16px;
+  }
+
+  .auth-card {
+    height: auto;
+    min-height: 600px;
+    border-radius: 32px 32px 0 0;
+    padding: 42px 24px 40px;
+    margin-top: -20px;
+  }
+
+  .auth-title { font-size: 34px; }
+  .auth-subtitle { font-size: 17px; }
+}
+
+/* JHANVI AUTH REFERENCE OVERRIDES - END */
+
+
+/* FINAL JHANVI AUTH REFERENCE FIX */
+.auth-overlay{grid-template-columns:minmax(0,65%) minmax(0,35%);background:#071019;}
+.auth-hero{padding:58px 6%;overflow:hidden;}
+.auth-hero-copy{margin-top:70px;max-width:760px;}
+.auth-hero-title{font-size:clamp(48px,4.4vw,76px);line-height:.96;letter-spacing:-3px;white-space:normal;}
+.auth-hero-title .hero-title-main{display:block;color:#fff!important;margin-bottom:7px;}
+.auth-hero-title .hero-title-accent{display:block;color:#ffbe32!important;}
+.auth-hero-line{max-width:650px;font-size:clamp(17px,1.35vw,23px);margin-top:25px;}
+.auth-hero-route{right:3%;top:27%;width:min(430px,40%);}
+.auth-vehicle-types{margin-top:34px;}
+.auth-card{padding:62px clamp(32px,4vw,68px) 45px;border-radius:42px 0 0 42px;overflow-y:auto;}
+.auth-title{font-size:clamp(32px,2.7vw,46px);max-width:520px;}
+.auth-subtitle{font-size:18px;margin-bottom:30px;}
+.auth-field{font-size:16px;color:#7e8596;}
+.auth-field input,.auth-field select{height:62px;padding:0 22px;font-size:17px;}
+.auth-field input::placeholder{color:#8b91a1;opacity:1;}
+.auth-field>input:not(:placeholder-shown),.auth-field>select{margin-top:0;}
+@media(max-width:1100px){.auth-overlay{grid-template-columns:minmax(0,62%) minmax(390px,38%);}.auth-hero-title{font-size:clamp(44px,4.5vw,62px);}.auth-card{padding-left:32px;padding-right:32px;}}
+@media(max-width:899px){.auth-overlay{display:block;overflow-y:auto;}.auth-hero{min-height:420px;padding:32px 26px 45px;}.auth-hero-copy{margin-top:45px;}.auth-hero-title{font-size:48px;}.auth-hero-route{width:250px;right:0;top:34%;}.auth-card{border-radius:32px 32px 0 0;padding:42px 24px 40px;}.auth-field{font-size:16px;}}
+/* END FINAL JHANVI AUTH REFERENCE FIX */
+
+
+/* =========================================================
+   JHANVI CARS - FINAL AUTH REFERENCE FORM
+   ========================================================= */
+
+.auth-field-icon {
+  position: relative;
+  display: block;
+  margin-bottom: 14px;
+  font-size: 0;
+}
+
+.auth-field-icon .field-icon {
+  position: absolute;
+  z-index: 3;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6f7789;
+  font-size: 21px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.auth-field-icon input,
+.auth-field-icon select {
+  width: 100%;
+  height: 62px;
+  padding: 0 22px 0 62px !important;
+  box-sizing: border-box;
+  border: 1px solid #dedfe4;
+  border-radius: 18px;
+  background: rgba(255,255,255,.92);
+  color: #252c3b;
+  font-size: 17px;
+  font-weight: 500;
+  outline: none;
+  transition: .2s ease;
+}
+
+.auth-field-icon input::placeholder {
+  color: #858c9e;
+  opacity: 1;
+}
+
+.auth-field-icon input:focus,
+.auth-field-icon select:focus {
+  border-color: #f4b82f;
+  box-shadow: 0 0 0 4px rgba(244,184,47,.12);
+}
+
+/* Vehicle cards on hero */
+
+.auth-vehicle-types {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  gap: 18px;
+  margin-top: 34px;
+}
+
+.auth-vehicle-card {
+  width: 108px;
+  height: 98px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 20px;
+  background: rgba(9,19,27,.58);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 14px 32px rgba(0,0,0,.2);
+}
+
+.auth-vehicle-card .vehicle-icon {
+  font-size: 29px;
+  line-height: 1;
+}
+
+.auth-vehicle-card strong {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Role selector */
+
+.auth-role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0 22px;
+}
+
+.auth-role-toggle button {
+  height: 60px;
+  border-radius: 30px;
+  border: 1px solid #dedfe4;
+  background: #fff;
+  color: #262d3b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.auth-role-toggle button.active {
+  background: #202020;
+  color: #fff;
+  border-color: #202020;
+}
+
+.auth-role-toggle button:last-child.active {
+  color: #ffc039;
+}
+
+/* Signup button */
+
+.auth-card .book-button {
+  height: 68px;
+  border-radius: 34px;
+  background: linear-gradient(90deg,#ffbd35,#ffc844);
+  color: #111827;
+  font-size: 21px;
+  font-weight: 800;
+  box-shadow: 0 14px 30px rgba(255,190,55,.24);
+}
+
+/* Mobile */
+
+@media (max-width: 899px) {
+  .auth-vehicle-types {
+    gap: 9px;
+  }
+
+  .auth-vehicle-card {
+    width: 88px;
+    height: 82px;
+    border-radius: 16px;
+  }
+
+  .auth-field-icon input,
+  .auth-field-icon select {
+    padding-left: 57px !important;
+  }
+
+  .auth-field-icon .field-icon {
+    left: 19px;
+  }
+}
+
+/* END FINAL AUTH REFERENCE FORM */
+
+/* =========================================================
+   FINAL JHANVI AUTH REFERENCE POLISH
+   ========================================================= */
+
+.auth-card {
+  padding-top: 82px;
+  padding-bottom: 48px;
+  border-radius: 42px 0 0 42px;
+}
+
+.auth-close {
+  top: 24px;
+  right: 24px;
+  z-index: 50;
+}
+
+.auth-title {
+  max-width: 560px;
+  font-weight: 850;
+}
+
+.auth-subtitle {
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+/* Clean SVG vehicle icons */
+
+.auth-vehicle-card .vehicle-icon {
+  width: 38px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-vehicle-card .vehicle-icon svg {
+  width: 38px;
+  height: 34px;
+  fill: none;
+  stroke: #f7bd38;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-vehicle-card:nth-child(2) .vehicle-icon svg,
+.auth-vehicle-card:nth-child(3) .vehicle-icon svg {
+  stroke: #e9edf2;
+}
+
+/* ---------------------------------------------------------
+   Premium city skyline
+   --------------------------------------------------------- */
+
+.auth-hero-city {
+  position: absolute;
+  z-index: 1;
+  left: 48%;
+  right: 0;
+  bottom: 10%;
+  height: 42%;
+  opacity: .48;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.city-building {
+  position: relative;
+  width: 11%;
+  min-width: 38px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(102,126,135,.30) 0 7px,
+      transparent 7px 16px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(28,49,58,.82),
+      rgba(7,18,25,.96)
+    );
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.city-building-1 { height: 45%; }
+.city-building-2 { height: 67%; }
+.city-building-3 { height: 52%; }
+.city-building-4 { height: 82%; }
+
+.city-building::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 2px;
+  height: 22px;
+  transform: translateX(-50%);
+  background: rgba(80,105,113,.5);
+}
+
+/* ---------------------------------------------------------
+   Stylized car silhouette
+   --------------------------------------------------------- */
+
+.auth-hero-car {
+  position: absolute;
+  z-index: 4;
+  right: -3%;
+  bottom: 7%;
+  width: 48%;
+  max-width: 510px;
+  height: 180px;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+}
+
+.car-body {
+  position: absolute;
+  left: 5%;
+  right: 2%;
+  bottom: 27px;
+  height: 72px;
+  border-radius: 42px 60px 18px 18px;
+  background:
+    linear-gradient(
+      150deg,
+      #34434a 0%,
+      #15232b 40%,
+      #071219 100%
+    );
+  border: 2px solid rgba(177,194,198,.25);
+}
+
+.car-window {
+  position: absolute;
+  z-index: 2;
+  left: 25%;
+  top: 45px;
+  width: 45%;
+  height: 45px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(85,125,139,.75),
+      rgba(7,20,28,.95)
+    );
+  clip-path: polygon(10% 100%, 25% 0, 78% 0, 100% 100%);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.car-wheel {
+  position: absolute;
+  z-index: 5;
+  bottom: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #080d11;
+  border: 7px solid #1c252b;
+  box-shadow: inset 0 0 0 5px #080d11;
+}
+
+.car-wheel-left { left: 20%; }
+.car-wheel-right { right: 15%; }
+
+.car-light {
+  position: absolute;
+  z-index: 6;
+  right: 4%;
+  bottom: 61px;
+  width: 34px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffe7a1;
+  box-shadow: 0 0 18px rgba(255,208,83,.85);
+}
+
+/* ---------------------------------------------------------
+   Road glow
+   --------------------------------------------------------- */
+
+.auth-hero::after {
+  bottom: 6%;
+  height: 5px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      #a66b17 20%,
+      #ffc13d 45%,
+      #eaa62c 70%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 18px rgba(255,185,47,.55),
+    0 0 45px rgba(255,160,20,.18);
+}
+
+/* Keep artwork behind readable content */
+
+.auth-hero-brand,
+.auth-hero-copy,
+.auth-vehicle-types,
+.auth-hero-route {
+  position: relative;
+  z-index: 8;
+}
+
+/* Desktop proportions */
+
+@media (min-width: 1200px) {
+  .auth-overlay {
+    grid-template-columns: 65% 35%;
+  }
+
+  .auth-hero {
+    padding-left: 6%;
+    padding-right: 5%;
+  }
+
+  .auth-card {
+    padding-left: 56px;
+    padding-right: 56px;
+  }
+}
+
+/* Smaller desktop */
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-overlay {
+    grid-template-columns: 62% 38%;
+  }
+
+  .auth-card {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .auth-hero-car {
+    width: 52%;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 899px) {
+  .auth-card {
+    padding-top: 60px;
+    border-radius: 32px 32px 0 0;
+  }
+
+  .auth-hero-city {
+    left: 35%;
+    height: 35%;
+  }
+
+  .auth-hero-car {
+    width: 70%;
+    height: 140px;
+    right: -8%;
+    bottom: 4%;
+  }
+
+  .car-wheel {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* END FINAL JHANVI AUTH REFERENCE POLISH */
+
+
+/* =========================================================
+   FINAL HERO REFINEMENT
+   ========================================================= */
+
+.auth-hero-car {
+  display: none;
+}
+
+/* Softer skyline */
+.auth-hero-city {
+  left: 43%;
+  right: -2%;
+  bottom: 9%;
+  height: 39%;
+  opacity: .30;
+  gap: 12px;
+}
+
+.city-building {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(105,130,140,.20) 0 6px,
+      transparent 6px 15px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(27,48,57,.65),
+      rgba(7,18,25,.90)
+    );
+}
+
+/* Put route in the open space beside the title */
+.auth-hero-route {
+  top: 25%;
+  right: 4%;
+  width: min(430px, 40%);
+  z-index: 9;
+}
+
+/* Better hero vertical balance */
+.auth-hero-copy {
+  margin-top: 68px;
+  max-width: 720px;
+}
+
+.auth-hero-title {
+  font-size: clamp(50px, 4.3vw, 78px);
+  line-height: .97;
+}
+
+.auth-hero-line {
+  max-width: 610px;
+  margin-top: 28px;
+}
+
+/* Vehicle cards slightly closer to reference */
+.auth-vehicle-types {
+  margin-top: 36px;
+  gap: 16px;
+}
+
+.auth-vehicle-card {
+  width: 106px;
+  height: 96px;
+  border-radius: 20px;
+  background: rgba(7,18,26,.60);
+}
+
+/* Add a premium road/car-light impression at bottom */
+.auth-hero {
+  background:
+    radial-gradient(
+      ellipse at 70% 76%,
+      rgba(255,176,45,.12),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 68% 38%,
+      rgba(31,159,130,.08),
+      transparent 28%
+    ),
+    linear-gradient(
+      135deg,
+      #06101a 0%,
+      #091821 48%,
+      #0b211d 100%
+    );
+}
+
+.auth-hero::before {
+  inset: 30% 0 0;
+  background:
+    linear-gradient(
+      to top,
+      rgba(3,10,16,.98),
+      rgba(3,10,16,.05)
+    );
+}
+
+/* Premium road */
+.auth-hero::after {
+  left: -10%;
+  right: -10%;
+  bottom: 7%;
+  height: 5px;
+  transform: rotate(-2deg);
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(175,109,24,.45) 18%,
+      #e7a82b 38%,
+      #ffc13b 55%,
+      #d99622 76%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 18px rgba(255,186,48,.50),
+    0 0 50px rgba(255,150,20,.16);
+}
+
+/* Right panel */
+.auth-card {
+  padding-top: 74px;
+  padding-bottom: 48px;
+  box-shadow: -22px 0 65px rgba(0,0,0,.24);
+}
+
+/* Keep close button away from first field */
+.auth-close {
+  top: 24px;
+  right: 24px;
+}
+
+/* Signup form spacing */
+.auth-title {
+  margin-bottom: 0;
+}
+
+.auth-subtitle {
+  margin-top: 12px;
+  margin-bottom: 28px;
+}
+
+.auth-field-icon {
+  margin-bottom: 14px;
+}
+
+.auth-role-toggle {
+  margin-top: 18px;
+  margin-bottom: 22px;
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .auth-overlay {
+    grid-template-columns: 65% 35%;
+  }
+
+  .auth-card {
+    padding-left: 58px;
+    padding-right: 58px;
+  }
+}
+
+/* Smaller screens */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-overlay {
+    grid-template-columns: 62% 38%;
+  }
+
+  .auth-hero-route {
+    width: 36%;
+    right: 2%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 899px) {
+  .auth-hero {
+    min-height: 390px;
+  }
+
+  .auth-hero-route {
+    width: 245px;
+    right: -15px;
+    top: 35%;
+  }
+
+  .auth-hero-city {
+    left: 25%;
+    height: 32%;
+  }
+
+  .auth-card {
+    padding-top: 58px;
+  }
+}
+
+/* END FINAL HERO REFINEMENT */
+
+/* =========================================================
+   FINAL JHANVI AUTH REFERENCE POLISH
+   ========================================================= */
+
+.auth-card {
+  padding-top: 82px;
+  padding-bottom: 48px;
+  border-radius: 42px 0 0 42px;
+}
+
+.auth-close {
+  top: 24px;
+  right: 24px;
+  z-index: 50;
+}
+
+.auth-title {
+  max-width: 560px;
+  font-weight: 850;
+}
+
+.auth-subtitle {
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+/* Clean SVG vehicle icons */
+
+.auth-vehicle-card .vehicle-icon {
+  width: 38px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-vehicle-card .vehicle-icon svg {
+  width: 38px;
+  height: 34px;
+  fill: none;
+  stroke: #f7bd38;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-vehicle-card:nth-child(2) .vehicle-icon svg,
+.auth-vehicle-card:nth-child(3) .vehicle-icon svg {
+  stroke: #e9edf2;
+}
+
+/* ---------------------------------------------------------
+   Premium city skyline
+   --------------------------------------------------------- */
+
+.auth-hero-city {
+  position: absolute;
+  z-index: 1;
+  left: 48%;
+  right: 0;
+  bottom: 10%;
+  height: 42%;
+  opacity: .48;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.city-building {
+  position: relative;
+  width: 11%;
+  min-width: 38px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(102,126,135,.30) 0 7px,
+      transparent 7px 16px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(28,49,58,.82),
+      rgba(7,18,25,.96)
+    );
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.city-building-1 { height: 45%; }
+.city-building-2 { height: 67%; }
+.city-building-3 { height: 52%; }
+.city-building-4 { height: 82%; }
+
+.city-building::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 2px;
+  height: 22px;
+  transform: translateX(-50%);
+  background: rgba(80,105,113,.5);
+}
+
+/* ---------------------------------------------------------
+   Stylized car silhouette
+   --------------------------------------------------------- */
+
+.auth-hero-car {
+  position: absolute;
+  z-index: 4;
+  right: -3%;
+  bottom: 7%;
+  width: 48%;
+  max-width: 510px;
+  height: 180px;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+}
+
+.car-body {
+  position: absolute;
+  left: 5%;
+  right: 2%;
+  bottom: 27px;
+  height: 72px;
+  border-radius: 42px 60px 18px 18px;
+  background:
+    linear-gradient(
+      150deg,
+      #34434a 0%,
+      #15232b 40%,
+      #071219 100%
+    );
+  border: 2px solid rgba(177,194,198,.25);
+}
+
+.car-window {
+  position: absolute;
+  z-index: 2;
+  left: 25%;
+  top: 45px;
+  width: 45%;
+  height: 45px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(85,125,139,.75),
+      rgba(7,20,28,.95)
+    );
+  clip-path: polygon(10% 100%, 25% 0, 78% 0, 100% 100%);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.car-wheel {
+  position: absolute;
+  z-index: 5;
+  bottom: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #080d11;
+  border: 7px solid #1c252b;
+  box-shadow: inset 0 0 0 5px #080d11;
+}
+
+.car-wheel-left { left: 20%; }
+.car-wheel-right { right: 15%; }
+
+.car-light {
+  position: absolute;
+  z-index: 6;
+  right: 4%;
+  bottom: 61px;
+  width: 34px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffe7a1;
+  box-shadow: 0 0 18px rgba(255,208,83,.85);
+}
+
+/* ---------------------------------------------------------
+   Road glow
+   --------------------------------------------------------- */
+
+.auth-hero::after {
+  bottom: 6%;
+  height: 5px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      #a66b17 20%,
+      #ffc13d 45%,
+      #eaa62c 70%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 18px rgba(255,185,47,.55),
+    0 0 45px rgba(255,160,20,.18);
+}
+
+/* Keep artwork behind readable content */
+
+.auth-hero-brand,
+.auth-hero-copy,
+.auth-vehicle-types,
+.auth-hero-route {
+  position: relative;
+  z-index: 8;
+}
+
+/* Desktop proportions */
+
+@media (min-width: 1200px) {
+  .auth-overlay {
+    grid-template-columns: 65% 35%;
+  }
+
+  .auth-hero {
+    padding-left: 6%;
+    padding-right: 5%;
+  }
+
+  .auth-card {
+    padding-left: 56px;
+    padding-right: 56px;
+  }
+}
+
+/* Smaller desktop */
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-overlay {
+    grid-template-columns: 62% 38%;
+  }
+
+  .auth-card {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .auth-hero-car {
+    width: 52%;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 899px) {
+  .auth-card {
+    padding-top: 60px;
+    border-radius: 32px 32px 0 0;
+  }
+
+  .auth-hero-city {
+    left: 35%;
+    height: 35%;
+  }
+
+  .auth-hero-car {
+    width: 70%;
+    height: 140px;
+    right: -8%;
+    bottom: 4%;
+  }
+
+  .car-wheel {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* END FINAL JHANVI AUTH REFERENCE POLISH */
+
+/* =========================================================
+   FINAL JHANVI AUTH REFERENCE POLISH
+   ========================================================= */
+
+.auth-card {
+  padding-top: 82px;
+  padding-bottom: 48px;
+  border-radius: 42px 0 0 42px;
+}
+
+.auth-close {
+  top: 24px;
+  right: 24px;
+  z-index: 50;
+}
+
+.auth-title {
+  max-width: 560px;
+  font-weight: 850;
+}
+
+.auth-subtitle {
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+/* Clean SVG vehicle icons */
+
+.auth-vehicle-card .vehicle-icon {
+  width: 38px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-vehicle-card .vehicle-icon svg {
+  width: 38px;
+  height: 34px;
+  fill: none;
+  stroke: #f7bd38;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-vehicle-card:nth-child(2) .vehicle-icon svg,
+.auth-vehicle-card:nth-child(3) .vehicle-icon svg {
+  stroke: #e9edf2;
+}
+
+/* ---------------------------------------------------------
+   Premium city skyline
+   --------------------------------------------------------- */
+
+.auth-hero-city {
+  position: absolute;
+  z-index: 1;
+  left: 48%;
+  right: 0;
+  bottom: 10%;
+  height: 42%;
+  opacity: .48;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.city-building {
+  position: relative;
+  width: 11%;
+  min-width: 38px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(102,126,135,.30) 0 7px,
+      transparent 7px 16px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(28,49,58,.82),
+      rgba(7,18,25,.96)
+    );
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+
+.city-building-1 { height: 45%; }
+.city-building-2 { height: 67%; }
+.city-building-3 { height: 52%; }
+.city-building-4 { height: 82%; }
+
+.city-building::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 2px;
+  height: 22px;
+  transform: translateX(-50%);
+  background: rgba(80,105,113,.5);
+}
+
+/* ---------------------------------------------------------
+   Stylized car silhouette
+   --------------------------------------------------------- */
+
+.auth-hero-car {
+  position: absolute;
+  z-index: 4;
+  right: -3%;
+  bottom: 7%;
+  width: 48%;
+  max-width: 510px;
+  height: 180px;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+}
+
+.car-body {
+  position: absolute;
+  left: 5%;
+  right: 2%;
+  bottom: 27px;
+  height: 72px;
+  border-radius: 42px 60px 18px 18px;
+  background:
+    linear-gradient(
+      150deg,
+      #34434a 0%,
+      #15232b 40%,
+      #071219 100%
+    );
+  border: 2px solid rgba(177,194,198,.25);
+}
+
+.car-window {
+  position: absolute;
+  z-index: 2;
+  left: 25%;
+  top: 45px;
+  width: 45%;
+  height: 45px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(85,125,139,.75),
+      rgba(7,20,28,.95)
+    );
+  clip-path: polygon(10% 100%, 25% 0, 78% 0, 100% 100%);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.car-wheel {
+  position: absolute;
+  z-index: 5;
+  bottom: 6px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #080d11;
+  border: 7px solid #1c252b;
+  box-shadow: inset 0 0 0 5px #080d11;
+}
+
+.car-wheel-left { left: 20%; }
+.car-wheel-right { right: 15%; }
+
+.car-light {
+  position: absolute;
+  z-index: 6;
+  right: 4%;
+  bottom: 61px;
+  width: 34px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffe7a1;
+  box-shadow: 0 0 18px rgba(255,208,83,.85);
+}
+
+/* ---------------------------------------------------------
+   Road glow
+   --------------------------------------------------------- */
+
+.auth-hero::after {
+  bottom: 6%;
+  height: 5px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      #a66b17 20%,
+      #ffc13d 45%,
+      #eaa62c 70%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 18px rgba(255,185,47,.55),
+    0 0 45px rgba(255,160,20,.18);
+}
+
+/* Keep artwork behind readable content */
+
+.auth-hero-brand,
+.auth-hero-copy,
+.auth-vehicle-types,
+.auth-hero-route {
+  position: relative;
+  z-index: 8;
+}
+
+/* Desktop proportions */
+
+@media (min-width: 1200px) {
+  .auth-overlay {
+    grid-template-columns: 65% 35%;
+  }
+
+  .auth-hero {
+    padding-left: 6%;
+    padding-right: 5%;
+  }
+
+  .auth-card {
+    padding-left: 56px;
+    padding-right: 56px;
+  }
+}
+
+/* Smaller desktop */
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-overlay {
+    grid-template-columns: 62% 38%;
+  }
+
+  .auth-card {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .auth-hero-car {
+    width: 52%;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 899px) {
+  .auth-card {
+    padding-top: 60px;
+    border-radius: 32px 32px 0 0;
+  }
+
+  .auth-hero-city {
+    left: 35%;
+    height: 35%;
+  }
+
+  .auth-hero-car {
+    width: 70%;
+    height: 140px;
+    right: -8%;
+    bottom: 4%;
+  }
+
+  .car-wheel {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* END FINAL JHANVI AUTH REFERENCE POLISH */
+
+
+/* =========================================================
+   JHANVI CARS - FAKE HERO CAR ENABLED
+   ========================================================= */
+
+.auth-hero-car {
+  display: block !important;
+  position: absolute;
+  z-index: 6;
+  right: -2%;
+  bottom: 7%;
+  width: 48%;
+  max-width: 520px;
+  height: 190px;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 18px 25px rgba(0,0,0,.55))
+    drop-shadow(0 0 18px rgba(255,180,45,.10));
+}
+
+.car-body {
+  position: absolute;
+  left: 4%;
+  right: 1%;
+  bottom: 25px;
+  height: 76px;
+  border-radius: 48px 65px 20px 20px;
+  background:
+    linear-gradient(
+      145deg,
+      #465963 0%,
+      #263941 25%,
+      #14252e 55%,
+      #071219 100%
+    );
+  border: 2px solid rgba(190,210,215,.30);
+  box-shadow:
+    inset 0 12px 20px rgba(255,255,255,.06),
+    inset 0 -12px 18px rgba(0,0,0,.35);
+}
+
+.car-window {
+  position: absolute;
+  z-index: 3;
+  left: 23%;
+  top: 42px;
+  width: 47%;
+  height: 49px;
+  background:
+    linear-gradient(
+      135deg,
+      #3b5c69 0%,
+      #18313d 42%,
+      #081820 100%
+    );
+  clip-path: polygon(
+    8% 100%,
+    24% 0,
+    78% 0,
+    100% 100%
+  );
+  border: 1px solid rgba(220,240,245,.20);
+  box-shadow:
+    inset 0 0 18px rgba(120,190,210,.12);
+}
+
+.car-wheel {
+  position: absolute;
+  z-index: 7;
+  bottom: 3px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      #303c42 0 22%,
+      #080d11 24% 58%,
+      #1b252b 60% 72%,
+      #05090c 74%
+    );
+  border: 3px solid #10171c;
+  box-shadow:
+    0 8px 12px rgba(0,0,0,.55);
+}
+
+.car-wheel-left {
+  left: 18%;
+}
+
+.car-wheel-right {
+  right: 13%;
+}
+
+.car-light {
+  position: absolute;
+  z-index: 8;
+  right: 3%;
+  bottom: 57px;
+  width: 38px;
+  height: 17px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      ellipse,
+      #fff8d7 0%,
+      #ffe69a 40%,
+      #ffc94e 70%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 12px rgba(255,224,139,.95),
+    0 0 28px rgba(255,191,53,.55);
+}
+
+/* subtle rear red glow */
+.auth-hero-car::after {
+  content: "";
+  position: absolute;
+  left: 5%;
+  bottom: 57px;
+  width: 15px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c94c38;
+  box-shadow: 0 0 12px rgba(220,70,45,.45);
+}
+
+/* Keep car behind route/text but above skyline */
+.auth-hero-city {
+  z-index: 2;
+}
+
+.auth-hero-car {
+  z-index: 5;
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .auth-hero-car {
+    width: 50%;
+    max-width: 540px;
+    bottom: 6%;
+  }
+}
+
+/* Smaller desktop */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    width: 52%;
+    right: -5%;
+    bottom: 6%;
+  }
+
+  .car-wheel {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 899px) {
+  .auth-hero-car {
+    width: 72%;
+    height: 145px;
+    right: -10%;
+    bottom: 3%;
+  }
+
+  .car-body {
+    height: 62px;
+  }
+
+  .car-window {
+    top: 37px;
+    height: 40px;
+  }
+
+  .car-wheel {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* END FAKE HERO CAR */
+
+
+/* =========================================================
+   FAKE CAR - ZOOM OUT
+   ========================================================= */
+
+.auth-hero-car {
+  width: 31% !important;
+  max-width: 360px !important;
+  height: 135px !important;
+  right: -1% !important;
+  bottom: 5% !important;
+}
+
+.car-body {
+  height: 57px !important;
+  bottom: 19px !important;
+}
+
+.car-window {
+  top: 30px !important;
+  height: 35px !important;
+}
+
+.car-wheel {
+  width: 38px !important;
+  height: 38px !important;
+  bottom: 1px !important;
+}
+
+.car-wheel-left {
+  left: 18% !important;
+}
+
+.car-wheel-right {
+  right: 13% !important;
+}
+
+.car-light {
+  width: 29px !important;
+  height: 13px !important;
+  bottom: 43px !important;
+  right: 3% !important;
+}
+
+.auth-hero-car::after {
+  bottom: 43px !important;
+}
+
+/* Keep skyline visible around the smaller car */
+.auth-hero-city {
+  opacity: .34;
+}
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    width: 34% !important;
+    max-width: 300px !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .auth-hero-car {
+    width: 48% !important;
+    max-width: 260px !important;
+    height: 105px !important;
+    right: -4% !important;
+  }
+
+  .car-body {
+    height: 46px !important;
+    bottom: 15px !important;
+  }
+
+  .car-window {
+    top: 24px !important;
+    height: 28px !important;
+  }
+
+  .car-wheel {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .car-light {
+    bottom: 35px !important;
+  }
+}
+
+/* END FAKE CAR ZOOM OUT */
+
+
+/* Move fake car farther into the background/right */
+.auth-hero-car {
+  right: -12% !important;
+  bottom: 4% !important;
+  opacity: .88;
+  transform: scale(.92);
+  transform-origin: bottom right;
+}
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    right: -15% !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .auth-hero-car {
+    right: -12% !important;
+  }
+}
+
+
+/* =========================================================
+   FAKE CAR - POSITION BESIDE SUV CARD
+   ========================================================= */
+
+.auth-hero-car {
+  right: 3% !important;
+  bottom: 3% !important;
+  width: 27% !important;
+  max-width: 300px !important;
+  height: 120px !important;
+  opacity: .90;
+  transform: scale(.88);
+  transform-origin: bottom right;
+}
+
+@media (min-width: 1200px) {
+  .auth-hero-car {
+    right: 2% !important;
+    bottom: 3% !important;
+    width: 28% !important;
+    max-width: 320px !important;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    right: 1% !important;
+    width: 28% !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .auth-hero-car {
+    right: -3% !important;
+    bottom: 2% !important;
+    width: 45% !important;
+    max-width: 250px !important;
+  }
+}
+
+/* END FAKE CAR POSITION */
+
+
+/* =========================================================
+   FAKE CAR - NEXT TO SUV, ON YELLOW ROAD
+   ========================================================= */
+
+.auth-hero-car {
+  right: 30% !important;
+  bottom: 2% !important;
+  width: 27% !important;
+  max-width: 300px !important;
+  height: 120px !important;
+  transform: scale(.88) !important;
+  transform-origin: bottom center;
+  opacity: .92;
+}
+
+/* Keep the wheels sitting on the road */
+.car-wheel {
+  bottom: 1px !important;
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .auth-hero-car {
+    right: 29% !important;
+    bottom: 2% !important;
+  }
+}
+
+/* Smaller desktop */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    right: 27% !important;
+    bottom: 2% !important;
+    width: 28% !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 899px) {
+  .auth-hero-car {
+    right: 18% !important;
+    bottom: 2% !important;
+    width: 43% !important;
+  }
+}
+
+/* END CAR POSITION */
+
+
+/* =========================================================
+   CAR - ALIGN WHEELS DIRECTLY WITH YELLOW ROAD
+   ========================================================= */
+
+.auth-hero-car {
+  right: 30% !important;
+  bottom: -1% !important;
+  width: 27% !important;
+  max-width: 300px !important;
+  height: 120px !important;
+  transform: scale(.88) !important;
+  transform-origin: bottom center;
+  opacity: .92;
+}
+
+.car-wheel {
+  bottom: 0 !important;
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .auth-hero-car {
+    right: 29% !important;
+    bottom: -1% !important;
+  }
+}
+
+/* Smaller desktop */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    right: 27% !important;
+    bottom: -1% !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 899px) {
+  .auth-hero-car {
+    right: 18% !important;
+    bottom: -1% !important;
+  }
+}
+
+/* END ROAD ALIGNMENT */
+
+
+/* =========================================================
+   FINAL CAR SIZE + ROAD ALIGNMENT
+   ========================================================= */
+
+.auth-hero-car {
+  right: 27% !important;
+  bottom: -3% !important;
+  width: 46% !important;
+  max-width: 500px !important;
+  height: 180px !important;
+  transform: scale(1) !important;
+  transform-origin: bottom center;
+  opacity: .94;
+}
+
+.car-body {
+  height: 72px !important;
+  bottom: 25px !important;
+}
+
+.car-window {
+  top: 43px !important;
+  height: 47px !important;
+}
+
+.car-wheel {
+  width: 50px !important;
+  height: 50px !important;
+  bottom: 0 !important;
+}
+
+.car-wheel-left {
+  left: 18% !important;
+}
+
+.car-wheel-right {
+  right: 13% !important;
+}
+
+.car-light {
+  width: 36px !important;
+  height: 16px !important;
+  bottom: 56px !important;
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  .auth-hero-car {
+    right: 26% !important;
+    bottom: -3% !important;
+    width: 48% !important;
+    max-width: 520px !important;
+  }
+}
+
+/* Smaller desktop */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    right: 24% !important;
+    bottom: -3% !important;
+    width: 47% !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 899px) {
+  .auth-hero-car {
+    right: 12% !important;
+    bottom: -2% !important;
+    width: 65% !important;
+    max-width: 360px !important;
+  }
+}
+
+/* END FINAL CAR SIZE + ROAD ALIGNMENT */
+
+
+/* =========================================================
+   RESTORE ORIGINAL FAKE CAR
+   ========================================================= */
+
+.auth-hero-car {
+  display: block !important;
+  position: absolute !important;
+  z-index: 4 !important;
+  right: -3% !important;
+  bottom: 7% !important;
+  width: 48% !important;
+  max-width: 510px !important;
+  height: 180px !important;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+  opacity: 1 !important;
+  transform: none !important;
+  transform-origin: initial !important;
+}
+
+.car-body {
+  left: 5% !important;
+  right: 2% !important;
+  bottom: 27px !important;
+  height: 72px !important;
+}
+
+.car-window {
+  left: 25% !important;
+  top: 45px !important;
+  width: 45% !important;
+  height: 45px !important;
+}
+
+.car-wheel {
+  bottom: 6px !important;
+  width: 48px !important;
+  height: 48px !important;
+}
+
+.car-wheel-left {
+  left: 20% !important;
+}
+
+.car-wheel-right {
+  right: 15% !important;
+}
+
+.car-light {
+  right: 4% !important;
+  bottom: 61px !important;
+  width: 34px !important;
+  height: 16px !important;
+}
+
+/* Original responsive behavior */
+@media (max-width: 1100px) and (min-width: 900px) {
+  .auth-hero-car {
+    width: 52% !important;
+    right: -3% !important;
+    bottom: 7% !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .auth-hero-car {
+    width: 70% !important;
+    height: 140px !important;
+    right: -8% !important;
+    bottom: 4% !important;
+  }
+
+  .car-wheel {
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
+
+/* END RESTORE ORIGINAL FAKE CAR */
+
+/* =========================
+   GLOBAL FOOTER
+   ========================= */
+
+.site-footer {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 24px;
+  text-align: center;
+  background: #071019;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.site-footer span {
+  display: inline-block;
+}
+
+@media (max-width: 899px) {
+  .site-footer {
+    padding: 15px 18px;
+    font-size: 12px;
+  }
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+}
+
+.site-footer {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 24px;
+  text-align: center;
+  background: #071019;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 899px) {
+  .site-footer {
+    padding: 15px 18px;
+    font-size: 12px;
+  }
 }

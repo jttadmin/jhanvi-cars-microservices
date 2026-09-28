@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+const vehicleTypeSchema = z.enum([
+  "AUTO",
+  "ECONOMY",
+  "COMFORT",
+  "COMFORT_PLUS",
+]);
+
 export const createDriverSchema = z.object({
   id: z.string().min(1),
   userId: z.string().min(1).nullable().optional(),
@@ -8,6 +15,8 @@ export const createDriverSchema = z.object({
   phone: z.string().min(10).max(15),
   licenseNumber: z.string().min(1),
   vehicleNumber: z.string().min(1),
+  vehicleType: vehicleTypeSchema,
+  vehicleModel: z.string().min(2),
   isAvailable: z.boolean(),
 });
 
@@ -18,6 +27,8 @@ export const updateDriverSchema = z.object({
   phone: z.string().min(10).max(15),
   licenseNumber: z.string().min(1),
   vehicleNumber: z.string().min(1),
+  vehicleType: vehicleTypeSchema,
+  vehicleModel: z.string().min(2),
   isAvailable: z.boolean(),
 });
 

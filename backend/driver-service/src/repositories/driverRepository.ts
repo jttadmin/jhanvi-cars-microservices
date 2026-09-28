@@ -17,6 +17,8 @@ export class DriverRepository {
       phone: row.phone,
       licenseNumber: row.license_number,
       vehicleNumber: row.vehicle_number,
+      vehicleType: row.vehicle_type,
+      vehicleModel: row.vehicle_model,
       isAvailable: row.is_available,
     };
   }
@@ -63,6 +65,8 @@ export class DriverRepository {
         phone: driver.phone,
         license_number: driver.licenseNumber,
         vehicle_number: driver.vehicleNumber,
+        vehicle_type: driver.vehicleType,
+        vehicle_model: driver.vehicleModel,
         is_available: driver.isAvailable,
       })
       .returning("*");
@@ -83,6 +87,8 @@ export class DriverRepository {
         phone: driver.phone,
         license_number: driver.licenseNumber,
         vehicle_number: driver.vehicleNumber,
+        vehicle_type: driver.vehicleType,
+        vehicle_model: driver.vehicleModel,
         is_available: driver.isAvailable,
         updated_at: this.db.fn.now(),
       })
