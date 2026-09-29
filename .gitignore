@@ -41,3 +41,6 @@ frontend-backup/
 *.zip
 scripts/fix_nginx_bookings.py
 .git-backup-*/
+
+# Timestamped local backups
+*.bak_*

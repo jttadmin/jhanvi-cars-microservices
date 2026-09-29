@@ -12,6 +12,10 @@ import {
   requireInternalService
 } from "../middlewares/internalAuth";
 
+import {
+  requireAuth
+} from "../middlewares/auth.middleware";
+
 const router = Router();
 
 router.get(
@@ -21,11 +25,13 @@ router.get(
 
 router.get(
   "/notifications",
+  requireAuth,
   asyncHandler(notificationController.getAll)
 );
 
 router.get(
   "/notifications/:id",
+  requireAuth,
   asyncHandler(notificationController.getById)
 );
 
@@ -37,12 +43,15 @@ router.post(
 
 router.put(
   "/notifications/:id",
+  requireInternalService,
   asyncHandler(notificationController.update)
 );
 
 router.patch(
   "/notifications/:id/status",
+  requireInternalService,
   asyncHandler(notificationController.updateStatus)
 );
 
 export default router;
+
