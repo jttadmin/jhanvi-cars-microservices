@@ -11,6 +11,7 @@ export function createDriverRoutes(
 
   router.get(
     "/",
+    requireInternalService,
     asyncHandler(controller.getAllDrivers)
   );
 
@@ -21,6 +22,7 @@ export function createDriverRoutes(
   );
   router.get(
     "/:id",
+    requireInternalService,
     asyncHandler(controller.getDriverById)
   );
 

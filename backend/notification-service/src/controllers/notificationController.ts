@@ -31,7 +31,7 @@ const updateNotificationSchema = z.object({
   userId: z.string().min(1),
   bookingId: z.string().min(1).nullable().optional(),
   channel: channelSchema,
-  title: z.string().min(1).max(200),
+  title: z.string().min(1).max(2000),
   message: z.string().min(1).max(5000),
   recipient: z.string().min(1).max(320)
 });
@@ -50,9 +50,26 @@ export const notificationController = {
     });
   },
 
-  getAll: async (_req: Request, res: Response) => {
-    res.json(
-      await notificationService.getAll()
+  getAll: async (
+    req: Request,
+    res: Response
+  ) => {
+    const userId = req.auth?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
+    }
+
+    const notifications =
+      await notificationService.getAll();
+
+    return res.json(
+      notifications.filter(
+        notification =>
+          notification.userId === userId
+      )
     );
   },
 
@@ -60,11 +77,28 @@ export const notificationController = {
     req: Request,
     res: Response
   ) => {
-    res.json(
+    const userId = req.auth?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
+    }
+
+    const notification =
       await notificationService.getById(
         String(req.params.id)
-      )
-    );
+      );
+
+    if (
+      notification.userId !== userId
+    ) {
+      return res.status(404).json({
+        message: "Notification not found"
+      });
+    }
+
+    return res.json(notification);
   },
 
   create: async (
