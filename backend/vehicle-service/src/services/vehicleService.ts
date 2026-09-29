@@ -7,96 +7,183 @@ import {
   VehicleRepository
 } from "../repositories/vehicleRepository";
 
+import {
+  MemcachedService
+} from "../cache/memcachedService";
+
 export class VehicleService {
 
+  private cache: MemcachedService;
+
   constructor(
-    private repository:
-      VehicleRepository
-  ) {}
+    private repository: VehicleRepository
+  ) {
+    this.cache = new MemcachedService();
+  }
 
-  async getAllVehicles():
-    Promise<Vehicle[]> {
+  async getAllVehicles(): Promise<Vehicle[]> {
 
-    return this.repository
-      .findAll();
+    const cacheKey = "vehicles:all";
+
+    const cached =
+      await this.cache.get<Vehicle[]>(cacheKey);
+
+    if (cached) {
+      console.log(
+        "Vehicle cache HIT:",
+        cacheKey
+      );
+
+      return cached;
+    }
+
+    console.log(
+      "Vehicle cache MISS:",
+      cacheKey
+    );
+
+    const vehicles =
+      await this.repository.findAll();
+
+    await this.cache.set(
+      cacheKey,
+      vehicles
+    );
+
+    return vehicles;
   }
 
   async getVehicleById(
     id: string
-  ):
-    Promise<
-      Vehicle | undefined
-    > {
+  ): Promise<Vehicle | undefined> {
 
-    return this.repository
-      .findById(id);
+    const cacheKey =
+      `vehicle:${id}`;
+
+    const cached =
+      await this.cache.get<Vehicle>(cacheKey);
+
+    if (cached) {
+      console.log(
+        "Vehicle cache HIT:",
+        cacheKey
+      );
+
+      return cached;
+    }
+
+    console.log(
+      "Vehicle cache MISS:",
+      cacheKey
+    );
+
+    const vehicle =
+      await this.repository.findById(id);
+
+    if (vehicle) {
+      await this.cache.set(
+        cacheKey,
+        vehicle
+      );
+    }
+
+    return vehicle;
   }
 
   async createVehicle(
     vehicle: Vehicle
   ): Promise<Vehicle> {
 
-    return this.repository
-      .create(vehicle);
+    const created =
+      await this.repository.create(vehicle);
+
+    await this.invalidateVehicleCache(
+      vehicle.id
+    );
+
+    return created;
   }
 
   async updateVehicle(
     id: string,
-
     data: Omit<
       Vehicle,
       "id" | "status"
     >
-  ):
-    Promise<
-      Vehicle | undefined
-    > {
+  ): Promise<Vehicle | undefined> {
 
     const existing =
-      await this.repository
-        .findById(id);
+      await this.repository.findById(id);
 
     if (!existing) {
       return undefined;
     }
 
-    return this.repository.update(
-      id,
-      {
+    const updated =
+      await this.repository.update(
         id,
+        {
+          id,
+          ...data,
+          status: existing.status
+        }
+      );
 
-        ...data,
+    await this.invalidateVehicleCache(id);
 
-        status:
-          existing.status
-      }
-    );
+    if (updated) {
+      await this.cache.set(
+        `vehicle:${id}`,
+        updated
+      );
+    }
+
+    return updated;
   }
 
   async updateVehicleStatus(
     id: string,
-
     status: VehicleStatus
-  ):
-    Promise<
-      Vehicle | undefined
-    > {
+  ): Promise<Vehicle | undefined> {
 
     const existing =
-      await this.repository
-        .findById(id);
+      await this.repository.findById(id);
 
     if (!existing) {
       return undefined;
     }
 
-    return this.repository.update(
-      id,
-      {
-        ...existing,
+    const updated =
+      await this.repository.update(
+        id,
+        {
+          ...existing,
+          status
+        }
+      );
 
-        status
-      }
+    await this.invalidateVehicleCache(id);
+
+    if (updated) {
+      await this.cache.set(
+        `vehicle:${id}`,
+        updated
+      );
+    }
+
+    return updated;
+  }
+
+  private async invalidateVehicleCache(
+    id: string
+  ): Promise<void> {
+
+    await this.cache.delete(
+      `vehicle:${id}`
+    );
+
+    await this.cache.delete(
+      "vehicles:all"
     );
   }
 }
