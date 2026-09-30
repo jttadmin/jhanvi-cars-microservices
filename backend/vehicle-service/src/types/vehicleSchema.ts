@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const vehicleTypeSchema =
   z.enum([
+    "AUTO",
     "SEDAN",
     "SUV",
     "HATCHBACK",

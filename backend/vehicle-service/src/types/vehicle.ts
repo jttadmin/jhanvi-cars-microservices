@@ -1,4 +1,5 @@
 export type VehicleType =
+  | "AUTO"
   | "SEDAN"
   | "SUV"
   | "HATCHBACK"
