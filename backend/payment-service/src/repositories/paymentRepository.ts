@@ -87,6 +87,21 @@ export const paymentRepository = {
     return row ? mapRow(row) : null;
   },
 
+  async updateTransactionId(
+    id: string,
+    transactionId: string
+  ) {
+    const [row] = await db<PaymentRow>("payments")
+      .where({ id })
+      .update({
+        transaction_id: transactionId,
+        updated_at: db.fn.now()
+      })
+      .returning("*");
+
+    return row ? mapRow(row) : null;
+  },
+
   async updateStatus(id: string, status: PaymentStatus) {
     const [row] = await db<PaymentRow>("payments")
       .where({ id })

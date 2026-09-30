@@ -168,6 +168,36 @@ export const paymentController = {
     return res.status(201).json(payment);
   },
 
+  createRazorpayOrder: async (
+    req: Request,
+    res: Response
+  ) => {
+    const id = String(req.params.id);
+
+    const existing =
+      await paymentService.getById(id);
+
+    if (
+      !req.internalService &&
+      req.auth?.role !== "ADMIN" &&
+      existing.userId !== req.auth?.id
+    ) {
+      return res.status(404).json({
+        message: "Payment not found"
+      });
+    }
+
+    const result =
+      await paymentService.createRazorpayOrder(id);
+
+    return res.status(201).json({
+      paymentId: result.payment.id,
+      razorpayOrderId: result.razorpayOrderId,
+      amount: result.amount,
+      currency: result.currency
+    });
+  },
+
   update: async (
     req: Request,
     res: Response
@@ -252,5 +282,57 @@ export const paymentController = {
         parsed.data.status
       )
     );
-  }
+  },
+  verifyRazorpayPayment: async (
+    req: Request,
+    res: Response
+  ) => {
+    const id = String(req.params.id);
+
+    const existing =
+      await paymentService.getById(id);
+
+    if (
+      !req.internalService &&
+      req.auth?.role !== "ADMIN" &&
+      existing.userId !== req.auth?.id
+    ) {
+      return res.status(404).json({
+        message: "Payment not found"
+      });
+    }
+
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
+
+    if (
+      typeof razorpay_order_id !== "string" ||
+      typeof razorpay_payment_id !== "string" ||
+      typeof razorpay_signature !== "string"
+    ) {
+      return res.status(400).json({
+        message:
+          "razorpay_order_id, razorpay_payment_id and razorpay_signature are required"
+      });
+    }
+
+    const payment =
+      await paymentService.verifyRazorpayPayment(
+        id,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
+      );
+
+    return res.status(200).json({
+      paymentId: payment.id,
+      bookingId: payment.bookingId,
+      status: payment.status,
+      transactionId: payment.transactionId
+    });
+  },
+
 };
