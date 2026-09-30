@@ -53,6 +53,20 @@ router.post(
   )
 );
 
+router.post(
+  "/payments/:id/razorpay-order",
+  asyncHandler(
+    paymentController.createRazorpayOrder
+  )
+);
+
+router.post(
+  "/payments/:id/razorpay-verify",
+  asyncHandler(
+    paymentController.verifyRazorpayPayment
+  )
+);
+
 router.put(
   "/payments/:id",
   asyncHandler(

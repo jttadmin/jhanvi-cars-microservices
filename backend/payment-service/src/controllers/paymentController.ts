@@ -168,6 +168,81 @@ export const paymentController = {
     return res.status(201).json(payment);
   },
 
+  createRazorpayOrder: async (
+    req: Request,
+    res: Response
+  ) => {
+    const id = String(req.params.id);
+
+    const payment =
+      await paymentService.getById(id);
+
+    if (
+      !req.internalService &&
+      req.auth?.role !== "ADMIN" &&
+      payment.userId !== req.auth?.id
+    ) {
+      return res.status(404).json({
+        message: "Payment not found"
+      });
+    }
+
+    const order =
+      await paymentService.createRazorpayOrder(id);
+
+    return res.status(201).json(order);
+  },
+
+  verifyRazorpayPayment: async (
+    req: Request,
+    res: Response
+  ) => {
+    const id = String(req.params.id);
+
+    const payment =
+      await paymentService.getById(id);
+
+    /*
+     * Customers can only verify their own payments.
+     */
+    if (
+      !req.internalService &&
+      req.auth?.role !== "ADMIN" &&
+      payment.userId !== req.auth?.id
+    ) {
+      return res.status(404).json({
+        message: "Payment not found"
+      });
+    }
+
+    const {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature
+    } = req.body;
+
+    if (
+      typeof razorpayOrderId !== "string" ||
+      typeof razorpayPaymentId !== "string" ||
+      typeof razorpaySignature !== "string"
+    ) {
+      return res.status(400).json({
+        message:
+          "razorpayOrderId, razorpayPaymentId and razorpaySignature are required"
+      });
+    }
+
+    const verifiedPayment =
+      await paymentService.verifyRazorpayPayment(
+        id,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      );
+
+    return res.json(verifiedPayment);
+  },
+
   update: async (
     req: Request,
     res: Response
@@ -208,7 +283,11 @@ export const paymentController = {
       userId:
         req.internalService
           ? parsed.data.userId
-          : existing.userId
+          : existing.userId,
+      transactionId:
+        req.internalService
+          ? parsed.data.transactionId
+          : existing.transactionId
     };
 
     return res.json(

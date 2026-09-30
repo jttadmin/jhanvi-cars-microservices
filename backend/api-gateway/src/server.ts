@@ -177,13 +177,13 @@ on: {
   );
 
 app.use(
-createProxyMiddleware({
-target: BOOKING_SERVICE_URL,
-changeOrigin: true,
-pathFilter: "/bookings",
-proxyTimeout: PROXY_TIMEOUT_MS,
-timeout: PROXY_TIMEOUT_MS,
-})
+  createProxyMiddleware({
+    target: BOOKING_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/bookings",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+  })
 );
 
 /*
@@ -240,13 +240,13 @@ requireRoles("CUSTOMER", "ADMIN")
 );
 
 app.use(
-createProxyMiddleware({
-target: PAYMENT_SERVICE_URL,
-changeOrigin: true,
-pathFilter: "/payments",
-proxyTimeout: PROXY_TIMEOUT_MS,
-timeout: PROXY_TIMEOUT_MS,
-})
+  createProxyMiddleware({
+    target: PAYMENT_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/payments",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+  })
 );
 
 /*

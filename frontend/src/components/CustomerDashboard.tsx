@@ -4,6 +4,15 @@ import { RideIcon } from './RideIcons';
 import GoogleRideMap from './GoogleRideMap';
 import { loadGoogleMaps, attachAutocomplete, computeRoute } from '../api/googleMaps';
 import { cancelBooking, createBooking, getBookings } from '../api/bookings';
+import {
+  createPayment,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+} from '../api/payments';
+import {
+  loadRazorpayCheckout,
+  type RazorpayResponse,
+} from '../utils/razorpay';
 import { estimateFare, type RideType } from '../utils/fare';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
@@ -392,23 +401,125 @@ export default function CustomerDashboard({
     setBookError(null);
 
     try {
-      await createBooking({
+      const fareAmount = estimateFare(route, rideType);
+
+      /*
+       * Step 1:
+       * Create the booking first.
+       */
+      const createdBooking = await createBooking({
         pickupLocation: pickup.address,
         dropoffLocation: destination.address,
-        fare: estimateFare(route, rideType),
+        fare: fareAmount,
         scheduledAt: new Date().toISOString(),
         vehicleType: rideType,
       });
 
-      clearLocations();
-      loadRides();
+      /*
+       * Step 2:
+       * Create the application's payment record.
+       */
+      const payment = await createPayment({
+        bookingId: createdBooking.id,
+        userId: user.id,
+        amount: fareAmount,
+        currency: 'INR',
+        method: 'UPI',
+      });
+
+      /*
+       * Step 3:
+       * Ask the backend to create the Razorpay order.
+       */
+      const razorpayOrder =
+        await createRazorpayOrder(payment.id);
+
+      /*
+       * Step 4:
+       * Load Razorpay Checkout.js.
+       */
+      await loadRazorpayCheckout();
+
+      if (!window.Razorpay) {
+        throw new Error(
+          'Razorpay Checkout is unavailable. Please try again.',
+        );
+      }
+
+      /*
+       * Step 5:
+       * Open Razorpay Checkout.
+       */
+      const options = {
+        key: razorpayOrder.keyId,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'Jhanvi Cars',
+        description: `Ride payment for booking ${createdBooking.id}`,
+        order_id: razorpayOrder.orderId,
+        prefill: {
+          name: user.name ?? '',
+          email: user.email ?? '',
+          contact: user.mobileNumber ?? '',
+        },
+        theme: {
+          color: '#111827',
+        },
+        handler: async (
+          response: RazorpayResponse,
+        ) => {
+          try {
+            /*
+             * Step 6:
+             * Verify the Razorpay signature on the backend.
+             */
+            await verifyRazorpayPayment(
+              payment.id,
+              {
+                razorpayOrderId:
+                  response.razorpay_order_id,
+                razorpayPaymentId:
+                  response.razorpay_payment_id,
+                razorpaySignature:
+                  response.razorpay_signature,
+              },
+            );
+
+            clearLocations();
+            await loadRides();
+          } catch (error) {
+            setBookError(
+              error instanceof ApiError
+                ? error.message
+                : 'Payment verification failed. Please contact support if money was deducted.',
+            );
+          } finally {
+            setBooking(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setBookError(
+              'Payment was cancelled. Your ride has not been confirmed.',
+            );
+            setBooking(false);
+          },
+        },
+      };
+
+      const razorpay =
+        new window.Razorpay(options);
+
+      razorpay.open();
     } catch (err) {
       setBookError(
         err instanceof ApiError
           ? err.message
-          : 'Could not book your ride. Please try again.',
+          : err instanceof Error
+            ? err.message
+            : 'Could not start payment. Please try again.',
       );
-    } finally {
+
       setBooking(false);
     }
   }
