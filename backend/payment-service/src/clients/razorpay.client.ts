@@ -9,7 +9,7 @@ if (!keyId || !keySecret) {
   );
 }
 
-export const razorpay = new Razorpay({
+export const razorpayClient = new Razorpay({
   key_id: keyId,
   key_secret: keySecret
 });

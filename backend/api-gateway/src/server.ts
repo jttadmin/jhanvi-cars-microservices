@@ -35,6 +35,22 @@ throw new Error("Missing required configuration: JWT_SECRET");
 const tokenVerifier = new LocalJwtTokenVerifier(JWT_SECRET);
 const authMiddleware = createAuthMiddleware(tokenVerifier);
 
+const INTERNAL_SERVICE_TOKEN =
+  process.env.INTERNAL_SERVICE_TOKEN;
+
+if (!INTERNAL_SERVICE_TOKEN) {
+  throw new Error(
+    "Missing required configuration: INTERNAL_SERVICE_TOKEN"
+  );
+}
+
+function injectInternalServiceToken(proxyReq: any) {
+  proxyReq.setHeader(
+    "x-internal-service-token",
+    INTERNAL_SERVICE_TOKEN
+  );
+}
+
 /*
 
 * Request ID
@@ -134,6 +150,9 @@ changeOrigin: true,
 pathFilter: "/drivers",
 proxyTimeout: PROXY_TIMEOUT_MS,
 timeout: PROXY_TIMEOUT_MS,
+on: {
+  proxyReq: injectInternalServiceToken,
+},
 })
 );
 
@@ -158,13 +177,13 @@ timeout: PROXY_TIMEOUT_MS,
   );
 
 app.use(
-createProxyMiddleware({
-target: BOOKING_SERVICE_URL,
-changeOrigin: true,
-pathFilter: "/bookings",
-proxyTimeout: PROXY_TIMEOUT_MS,
-timeout: PROXY_TIMEOUT_MS,
-})
+  createProxyMiddleware({
+    target: BOOKING_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/bookings",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+  })
 );
 
 /*
@@ -182,6 +201,9 @@ timeout: PROXY_TIMEOUT_MS,
   pathFilter: "/vehicles",
   proxyTimeout: PROXY_TIMEOUT_MS,
   timeout: PROXY_TIMEOUT_MS,
+  on: {
+    proxyReq: injectInternalServiceToken,
+  },
   })
   );
 
@@ -218,13 +240,13 @@ requireRoles("CUSTOMER", "ADMIN")
 );
 
 app.use(
-createProxyMiddleware({
-target: PAYMENT_SERVICE_URL,
-changeOrigin: true,
-pathFilter: "/payments",
-proxyTimeout: PROXY_TIMEOUT_MS,
-timeout: PROXY_TIMEOUT_MS,
-})
+  createProxyMiddleware({
+    target: PAYMENT_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/payments",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+  })
 );
 
 /*

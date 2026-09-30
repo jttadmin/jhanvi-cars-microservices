@@ -9,51 +9,16 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
 } from '../api/payments';
+import {
+  loadRazorpayCheckout,
+  type RazorpayResponse,
+} from '../utils/razorpay';
 import { estimateFare, type RideType } from '../utils/fare';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
 import { updateProfile } from '../api/auth';
 import type { AuthUser, Booking, LocationPoint, RouteResult } from '../types';
 import './CustomerDashboard.css';
-
-interface RazorpayCheckoutOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  order_id: string;
-  prefill?: {
-    name?: string;
-    email?: string;
-    contact?: string;
-  };
-  theme?: {
-    color?: string;
-  };
-  handler: (response: {
-    razorpay_order_id: string;
-    razorpay_payment_id: string;
-    razorpay_signature: string;
-  }) => void;
-  modal?: {
-    ondismiss?: () => void;
-  };
-}
-
-interface RazorpayCheckout {
-  open: () => void;
-}
-
-interface RazorpayConstructor {
-  new (options: RazorpayCheckoutOptions): RazorpayCheckout;
-}
-
-declare global {
-  interface Window {
-    Razorpay?: RazorpayConstructor;
-  }
-}
 
 interface CustomerDashboardProps {
   user?: AuthUser;
@@ -63,36 +28,6 @@ interface CustomerDashboardProps {
 }
 
 
-
-function loadRazorpayCheckout(): Promise<void> {
-  if (window.Razorpay) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
-    );
-
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () =>
-        reject(new Error('Could not load Razorpay Checkout.')),
-      );
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error('Could not load Razorpay Checkout.'));
-
-    document.body.appendChild(script);
-  });
-}
 
 function getRideVehicleIcon(vehicleType?: string): string {
   switch (vehicleType) {
@@ -462,116 +397,120 @@ export default function CustomerDashboard({
       return;
     }
 
-    const currentFare = estimateFare(route, rideType);
-
     setBooking(true);
     setBookError(null);
 
     try {
+      const fareAmount = estimateFare(route, rideType);
+
       /*
-       * 1. Create the Jhanvi Cars booking.
+       * Step 1:
+       * Create the booking first.
        */
       const createdBooking = await createBooking({
         pickupLocation: pickup.address,
         dropoffLocation: destination.address,
-        fare: currentFare,
+        fare: fareAmount,
         scheduledAt: new Date().toISOString(),
         vehicleType: rideType,
       });
 
       /*
-       * 2. Create our internal payment record.
+       * Step 2:
+       * Create the application's payment record.
        */
       const payment = await createPayment({
         bookingId: createdBooking.id,
         userId: user.id,
-        amount: currentFare,
+        amount: fareAmount,
         currency: 'INR',
         method: 'UPI',
       });
 
       /*
-       * 3. Ask payment-service to create the Razorpay order.
+       * Step 3:
+       * Ask the backend to create the Razorpay order.
        */
-      const razorpayOrder = await createRazorpayOrder(payment.id);
+      const razorpayOrder =
+        await createRazorpayOrder(payment.id);
 
       /*
-       * 4. Load Razorpay Checkout.js.
+       * Step 4:
+       * Load Razorpay Checkout.js.
        */
       await loadRazorpayCheckout();
 
       if (!window.Razorpay) {
-        throw new Error('Razorpay Checkout is unavailable.');
+        throw new Error(
+          'Razorpay Checkout is unavailable. Please try again.',
+        );
       }
 
-      const checkout = new window.Razorpay({
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      /*
+       * Step 5:
+       * Open Razorpay Checkout.
+       */
+      const options = {
+        key: razorpayOrder.keyId,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
         name: 'Jhanvi Cars',
-        description: `Cab booking ${createdBooking.id}`,
-        order_id: razorpayOrder.razorpayOrderId,
-
+        description: `Ride payment for booking ${createdBooking.id}`,
+        order_id: razorpayOrder.orderId,
         prefill: {
-          name: user.name || 'Customer',
-          email: user.email,
+          name: user.name ?? '',
+          email: user.email ?? '',
+          contact: user.mobileNumber ?? '',
         },
-
         theme: {
           color: '#111827',
         },
-
-        handler: async (response) => {
+        handler: async (
+          response: RazorpayResponse,
+        ) => {
           try {
             /*
-             * 5. Send Razorpay's callback data to our backend.
-             * The backend performs the actual HMAC verification.
+             * Step 6:
+             * Verify the Razorpay signature on the backend.
              */
-            const verified = await verifyRazorpayPayment(
+            await verifyRazorpayPayment(
               payment.id,
               {
-                razorpay_order_id:
+                razorpayOrderId:
                   response.razorpay_order_id,
-                razorpay_payment_id:
+                razorpayPaymentId:
                   response.razorpay_payment_id,
-                razorpay_signature:
+                razorpaySignature:
                   response.razorpay_signature,
               },
             );
 
-            if (verified.status !== 'PAID') {
-              throw new Error(
-                'Payment verification did not complete successfully.',
-              );
-            }
-
             clearLocations();
-            loadRides();
-
-            setBookError(null);
-          } catch (err) {
+            await loadRides();
+          } catch (error) {
             setBookError(
-              err instanceof ApiError
-                ? err.message
-                : 'Payment verification failed. Please contact support.',
+              error instanceof ApiError
+                ? error.message
+                : 'Payment verification failed. Please contact support if money was deducted.',
             );
           } finally {
             setBooking(false);
           }
         },
-
         modal: {
           ondismiss: () => {
-            setBooking(false);
             setBookError(
-              'Payment was cancelled. Your booking is still pending.',
+              'Payment was cancelled. Your ride has not been confirmed.',
             );
-            loadRides();
+            setBooking(false);
           },
         },
-      });
+      };
 
-      checkout.open();
+      const razorpay =
+        new window.Razorpay(options);
+
+      razorpay.open();
     } catch (err) {
       setBookError(
         err instanceof ApiError
@@ -580,6 +519,7 @@ export default function CustomerDashboard({
             ? err.message
             : 'Could not start payment. Please try again.',
       );
+
       setBooking(false);
     }
   }

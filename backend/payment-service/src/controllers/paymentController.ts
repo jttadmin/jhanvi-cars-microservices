@@ -174,28 +174,73 @@ export const paymentController = {
   ) => {
     const id = String(req.params.id);
 
-    const existing =
+    const payment =
       await paymentService.getById(id);
 
     if (
       !req.internalService &&
       req.auth?.role !== "ADMIN" &&
-      existing.userId !== req.auth?.id
+      payment.userId !== req.auth?.id
     ) {
       return res.status(404).json({
         message: "Payment not found"
       });
     }
 
-    const result =
+    const order =
       await paymentService.createRazorpayOrder(id);
 
-    return res.status(201).json({
-      paymentId: result.payment.id,
-      razorpayOrderId: result.razorpayOrderId,
-      amount: result.amount,
-      currency: result.currency
-    });
+    return res.status(201).json(order);
+  },
+
+  verifyRazorpayPayment: async (
+    req: Request,
+    res: Response
+  ) => {
+    const id = String(req.params.id);
+
+    const payment =
+      await paymentService.getById(id);
+
+    /*
+     * Customers can only verify their own payments.
+     */
+    if (
+      !req.internalService &&
+      req.auth?.role !== "ADMIN" &&
+      payment.userId !== req.auth?.id
+    ) {
+      return res.status(404).json({
+        message: "Payment not found"
+      });
+    }
+
+    const {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature
+    } = req.body;
+
+    if (
+      typeof razorpayOrderId !== "string" ||
+      typeof razorpayPaymentId !== "string" ||
+      typeof razorpaySignature !== "string"
+    ) {
+      return res.status(400).json({
+        message:
+          "razorpayOrderId, razorpayPaymentId and razorpaySignature are required"
+      });
+    }
+
+    const verifiedPayment =
+      await paymentService.verifyRazorpayPayment(
+        id,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      );
+
+    return res.json(verifiedPayment);
   },
 
   update: async (
@@ -238,7 +283,11 @@ export const paymentController = {
       userId:
         req.internalService
           ? parsed.data.userId
-          : existing.userId
+          : existing.userId,
+      transactionId:
+        req.internalService
+          ? parsed.data.transactionId
+          : existing.transactionId
     };
 
     return res.json(
@@ -282,57 +331,5 @@ export const paymentController = {
         parsed.data.status
       )
     );
-  },
-  verifyRazorpayPayment: async (
-    req: Request,
-    res: Response
-  ) => {
-    const id = String(req.params.id);
-
-    const existing =
-      await paymentService.getById(id);
-
-    if (
-      !req.internalService &&
-      req.auth?.role !== "ADMIN" &&
-      existing.userId !== req.auth?.id
-    ) {
-      return res.status(404).json({
-        message: "Payment not found"
-      });
-    }
-
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    } = req.body;
-
-    if (
-      typeof razorpay_order_id !== "string" ||
-      typeof razorpay_payment_id !== "string" ||
-      typeof razorpay_signature !== "string"
-    ) {
-      return res.status(400).json({
-        message:
-          "razorpay_order_id, razorpay_payment_id and razorpay_signature are required"
-      });
-    }
-
-    const payment =
-      await paymentService.verifyRazorpayPayment(
-        id,
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature
-      );
-
-    return res.status(200).json({
-      paymentId: payment.id,
-      bookingId: payment.bookingId,
-      status: payment.status,
-      transactionId: payment.transactionId
-    });
-  },
-
+  }
 };

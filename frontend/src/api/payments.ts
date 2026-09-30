@@ -1,28 +1,32 @@
 import { apiRequest } from './client';
-
-export interface CreatePaymentResponse {
+export interface Payment {
   id: string;
   bookingId: string;
   userId: string;
   amount: number;
   currency: string;
-  method: 'CASH' | 'CARD' | 'UPI' | 'WALLET';
+  method: string;
   status: string;
-  transactionId: string | null;
+  transactionId?: string | null;
 }
 
-export interface RazorpayOrderResponse {
+export interface RazorpayOrder {
   paymentId: string;
-  razorpayOrderId: string;
+  orderId: string;
   amount: number;
   currency: string;
+  keyId: string;
 }
 
-export interface RazorpayVerificationResponse {
-  paymentId: string;
+export interface RazorpayVerification {
+  id: string;
   bookingId: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  method: string;
   status: string;
-  transactionId: string;
+  transactionId?: string | null;
 }
 
 export async function createPayment(input: {
@@ -30,9 +34,9 @@ export async function createPayment(input: {
   userId: string;
   amount: number;
   currency: string;
-  method: 'UPI';
-}): Promise<CreatePaymentResponse> {
-  return apiRequest<CreatePaymentResponse>('/payments', {
+  method: 'CASH' | 'CARD' | 'UPI' | 'WALLET';
+}): Promise<Payment> {
+  return apiRequest<Payment>('/payments', {
     method: 'POST',
     body: input,
   });
@@ -40,9 +44,9 @@ export async function createPayment(input: {
 
 export async function createRazorpayOrder(
   paymentId: string,
-): Promise<RazorpayOrderResponse> {
-  return apiRequest<RazorpayOrderResponse>(
-    `/payments/${paymentId}/razorpay/order`,
+): Promise<RazorpayOrder> {
+  return apiRequest<RazorpayOrder>(
+    `/payments/${paymentId}/razorpay-order`,
     {
       method: 'POST',
     },
@@ -52,13 +56,13 @@ export async function createRazorpayOrder(
 export async function verifyRazorpayPayment(
   paymentId: string,
   input: {
-    razorpay_order_id: string;
-    razorpay_payment_id: string;
-    razorpay_signature: string;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
   },
-): Promise<RazorpayVerificationResponse> {
-  return apiRequest<RazorpayVerificationResponse>(
-    `/payments/${paymentId}/razorpay/verify`,
+): Promise<RazorpayVerification> {
+  return apiRequest<RazorpayVerification>(
+    `/payments/${paymentId}/razorpay-verify`,
     {
       method: 'POST',
       body: input,
