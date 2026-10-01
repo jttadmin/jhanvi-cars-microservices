@@ -57,6 +57,9 @@ spec:
                 name: {{ $root.Values.secrets.existingSecret }}
 
           env:
+            - name: NODE_ENV
+              value: "development"
+
             - name: DB_SCHEMA
               value: "{{ $service.dbSchema }}"
 
