@@ -3,29 +3,64 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: jhanvi-cars
+  name: jhanvi-cars-api
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "jhanvi-cars.labels" . | nindent 4 }}
   annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
 spec:
   ingressClassName: {{ .Values.ingress.className }}
 
+  tls:
+    - hosts:
+        - jhanvicars.in
+      secretName: jhanvicars-tls
+
   rules:
-    - http:
+    - host: jhanvicars.in
+      http:
         paths:
-          - path: /api
-            pathType: Prefix
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: api-gateway-service
                 port:
                   number: {{ .Values.services.apiGateway.port }}
 
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jhanvi-cars-web
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+
+  tls:
+    - hosts:
+        - jhanvicars.in
+      secretName: jhanvicars-tls
+
+  rules:
+    - host: jhanvicars.in
+      http:
+        paths:
           - path: /
             pathType: Prefix
             backend:
