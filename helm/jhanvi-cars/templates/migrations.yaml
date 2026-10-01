@@ -63,6 +63,14 @@ spec:
             - name: DB_SCHEMA
               value: "{{ $service.dbSchema }}"
 
+            {{- if eq $name "auth" }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.existingSecret }}
+                  key: {{ $root.Values.secrets.databaseKeys.auth }}
+            {{- end }}
+
 ---
 {{- end }}
 {{- end }}

@@ -66,7 +66,9 @@ data:
       GRANT USAGE, CREATE ON SCHEMA auth_schema TO auth_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth_schema TO auth_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA auth_schema TO auth_user;
-
+      
+      GRANT USAGE, CREATE ON SCHEMA public TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA public TO auth_user;
     EOSQL
 
 {{- end }}
