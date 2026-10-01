@@ -1,0 +1,204 @@
+global:
+  namespace: jhanvi-cars
+
+images:
+  apiGateway:
+    repository: jhanviadmin/jhanvi-cars-api-gateway
+    tag: "1.0"
+
+  authService:
+    repository: jhanviadmin/jhanvi-cars-auth-service
+    tag: "1.0"
+
+  userService:
+    repository: jhanviadmin/jhanvi-cars-user-service
+    tag: "1.0"
+
+  driverService:
+    repository: jhanviadmin/jhanvi-cars-driver-service
+    tag: "1.0"
+
+  bookingService:
+    repository: jhanviadmin/jhanvi-cars-booking-service
+    tag: "1.0"
+
+  vehicleService:
+    repository: jhanviadmin/jhanvi-cars-vehicle-service
+    tag: "1.0"
+
+  paymentService:
+    repository: jhanviadmin/jhanvi-cars-payment-service
+    tag: "1.0"
+
+  notificationService:
+    repository: jhanviadmin/jhanvi-cars-notification-service
+    tag: "1.0"
+
+  frontend:
+    repository: jhanviadmin/jhanvi-cars-frontend
+    tag: latest
+
+  migrations:
+    auth:
+      repository: jhanviadmin/jhanvi-cars-auth-service-migration
+      tag: "1.0"
+    user:
+      repository: jhanviadmin/jhanvi-cars-user-service-migration
+      tag: "1.0"
+    driver:
+      repository: jhanviadmin/jhanvi-cars-driver-service-migration
+      tag: "1.0"
+    booking:
+      repository: jhanviadmin/jhanvi-cars-booking-service-migration
+      tag: "1.0"
+    vehicle:
+      repository: jhanviadmin/jhanvi-cars-vehicle-service-migration
+      tag: "1.0"
+    payment:
+      repository: jhanviadmin/jhanvi-cars-payment-service-migration
+      tag: "1.0"
+    notification:
+      repository: jhanviadmin/jhanvi-cars-notification-service-migration
+      tag: "1.0"
+
+
+services:
+  apiGateway:
+    enabled: true
+    port: 3000
+    replicas: 1
+    dbSchema: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  auth:
+    enabled: true
+    port: 3001
+    replicas: 1
+    dbSchema: auth_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  user:
+    enabled: true
+    port: 3002
+    replicas: 1
+    dbSchema: user_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  driver:
+    enabled: true
+    port: 3003
+    replicas: 1
+    dbSchema: driver_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  booking:
+    enabled: true
+    port: 3004
+    replicas: 1
+    dbSchema: booking_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  vehicle:
+    enabled: true
+    port: 3005
+    replicas: 1
+    dbSchema: vehicle_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  payment:
+    enabled: true
+    port: 3006
+    replicas: 1
+    dbSchema: payment_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  notification:
+    enabled: true
+    port: 3007
+    replicas: 1
+    dbSchema: notification_schema
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+
+memcached:
+  enabled: true
+  host: memcached
+  port: 11211
+  ttlSeconds: 60
+
+
+postgres:
+  enabled: true
+
+  image:
+    repository: postgres
+    tag: "16-alpine"
+
+  port: 5432
+
+  database: jhanvi_cars
+  username: jhanvi_admin
+
+  storage:
+    size: 10Gi
+    storageClass: local-path
+
+
+ingress:
+  enabled: true
+  className: nginx
+
+
+secrets:
+  existingSecret: jhanvi-cars-secrets
+  databaseKeys:
+    default: DATABASE_URL
+    auth: AUTH_DATABASE_URL

@@ -1,0 +1,65 @@
+{{- if .Values.memcached.enabled }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memcached
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" . | nindent 4 }}
+    app: memcached
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: memcached
+
+  template:
+    metadata:
+      labels:
+        app: memcached
+
+    spec:
+      containers:
+        - name: memcached
+          image: memcached:1.6-alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: memcached
+              containerPort: 11211
+              protocol: TCP
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" . | nindent 4 }}
+    app: memcached
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: memcached
+
+  ports:
+    - name: memcached
+      port: {{ .Values.memcached.port }}
+      targetPort: memcached
+      protocol: TCP
+
+{{- end }}
