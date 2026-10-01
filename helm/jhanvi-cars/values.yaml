@@ -4,35 +4,35 @@ global:
 images:
   apiGateway:
     repository: jhanviadmin/jhanvi-cars-api-gateway
-    tag: latest
+    tag: "1.0"
 
   authService:
     repository: jhanviadmin/jhanvi-cars-auth-service
-    tag: latest
+    tag: "1.0"
 
   userService:
     repository: jhanviadmin/jhanvi-cars-user-service
-    tag: latest
+    tag: "1.0"
 
   driverService:
     repository: jhanviadmin/jhanvi-cars-driver-service
-    tag: latest
+    tag: "1.0"
 
   bookingService:
     repository: jhanviadmin/jhanvi-cars-booking-service
-    tag: latest
+    tag: "1.0"
 
   vehicleService:
     repository: jhanviadmin/jhanvi-cars-vehicle-service
-    tag: latest
+    tag: "1.0"
 
   paymentService:
     repository: jhanviadmin/jhanvi-cars-payment-service
-    tag: latest
+    tag: "1.0"
 
   notificationService:
     repository: jhanviadmin/jhanvi-cars-notification-service
-    tag: latest
+    tag: "1.0"
 
   frontend:
     repository: jhanviadmin/jhanvi-cars-frontend
