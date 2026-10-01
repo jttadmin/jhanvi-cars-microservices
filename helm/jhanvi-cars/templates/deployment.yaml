@@ -60,6 +60,20 @@ spec:
             - name: PORT
               value: "{{ $service.port }}"
 
+            {{- if eq $name "auth" }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.existingSecret }}
+                  key: {{ $root.Values.secrets.databaseKeys.auth }}
+            {{- else if $service.dbSchema }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.existingSecret }}
+                  key: {{ $root.Values.secrets.databaseKeys.default }}
+            {{- end }}
+
             {{- if $service.dbSchema }}
             - name: DB_SCHEMA
               value: "{{ $service.dbSchema }}"

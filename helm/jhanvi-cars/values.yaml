@@ -176,3 +176,6 @@ ingress:
 
 secrets:
   existingSecret: jhanvi-cars-secrets
+  databaseKeys:
+    default: DATABASE_URL
+    auth: AUTH_DATABASE_URL
