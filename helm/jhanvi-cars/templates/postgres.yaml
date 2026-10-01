@@ -68,6 +68,18 @@ spec:
                   name: {{ .Values.secrets.existingSecret }}
                   key: POSTGRES_PASSWORD
 
+            - name: USER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: USER_DB_PASSWORD
+
+            - name: AUTH_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: AUTH_DB_PASSWORD
+
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data

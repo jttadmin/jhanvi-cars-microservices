@@ -9,15 +9,64 @@ metadata:
     {{- include "jhanvi-cars.labels" . | nindent 4 }}
 
 data:
-  01-init.sql: |
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+  01-init.sh: |
+    #!/bin/bash
+    set -e
 
-    CREATE SCHEMA IF NOT EXISTS auth_schema;
-    CREATE SCHEMA IF NOT EXISTS user_schema;
-    CREATE SCHEMA IF NOT EXISTS driver_schema;
-    CREATE SCHEMA IF NOT EXISTS booking_schema;
-    CREATE SCHEMA IF NOT EXISTS vehicle_schema;
-    CREATE SCHEMA IF NOT EXISTS payment_schema;
-    CREATE SCHEMA IF NOT EXISTS notification_schema;
+    psql -v ON_ERROR_STOP=1 \
+      --username "$POSTGRES_USER" \
+      --dbname "$POSTGRES_DB" <<-EOSQL
+
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+      CREATE SCHEMA IF NOT EXISTS auth_schema;
+      CREATE SCHEMA IF NOT EXISTS user_schema;
+      CREATE SCHEMA IF NOT EXISTS driver_schema;
+      CREATE SCHEMA IF NOT EXISTS booking_schema;
+      CREATE SCHEMA IF NOT EXISTS vehicle_schema;
+      CREATE SCHEMA IF NOT EXISTS payment_schema;
+      CREATE SCHEMA IF NOT EXISTS notification_schema;
+
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'user_user') THEN
+          CREATE ROLE user_user LOGIN PASSWORD '$USER_DB_PASSWORD';
+        END IF;
+
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'auth_user') THEN
+          CREATE ROLE auth_user LOGIN PASSWORD '$AUTH_DB_PASSWORD';
+        END IF;
+      END
+      \$\$;
+
+      GRANT USAGE ON SCHEMA user_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA user_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA user_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA driver_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA driver_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA driver_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA booking_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA booking_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA booking_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA vehicle_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA vehicle_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA vehicle_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA payment_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA payment_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA payment_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA notification_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA notification_schema TO user_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA notification_schema TO user_user;
+
+      GRANT USAGE ON SCHEMA auth_schema TO auth_user;
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth_schema TO auth_user;
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA auth_schema TO auth_user;
+
+    EOSQL
 
 {{- end }}
