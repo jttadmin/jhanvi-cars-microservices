@@ -39,31 +39,31 @@ data:
       END
       \$\$;
 
-      GRANT USAGE ON SCHEMA user_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA user_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA user_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA user_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA driver_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA driver_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA driver_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA driver_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA booking_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA booking_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA booking_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA booking_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA vehicle_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA vehicle_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA vehicle_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA vehicle_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA payment_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA payment_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA payment_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA payment_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA notification_schema TO user_user;
+      GRANT USAGE, CREATE ON SCHEMA notification_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA notification_schema TO user_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA notification_schema TO user_user;
 
-      GRANT USAGE ON SCHEMA auth_schema TO auth_user;
+      GRANT USAGE, CREATE ON SCHEMA auth_schema TO auth_user;
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA auth_schema TO auth_user;
       GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA auth_schema TO auth_user;
 
