@@ -1,20 +1,11 @@
 {{- $root := . -}}
 
-{{- $migrationImages := dict
-  "auth" "authService"
-  "user" "userService"
-  "driver" "driverService"
-  "booking" "bookingService"
-  "vehicle" "vehicleService"
-  "payment" "paymentService"
-  "notification" "notificationService"
-}}
+
 
 {{- range $name, $service := .Values.services }}
 {{- if and $service.enabled $service.dbSchema }}
 
-{{- $imageKey := index $migrationImages $name }}
-{{- $image := index $root.Values.images $imageKey }}
+{{- $image := index $root.Values.images.migrations $name }}
 
 apiVersion: batch/v1
 kind: Job

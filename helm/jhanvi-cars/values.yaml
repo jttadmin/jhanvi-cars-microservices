@@ -38,6 +38,29 @@ images:
     repository: jhanviadmin/jhanvi-cars-frontend
     tag: latest
 
+  migrations:
+    auth:
+      repository: jhanviadmin/jhanvi-cars-auth-service-migration
+      tag: "1.0"
+    user:
+      repository: jhanviadmin/jhanvi-cars-user-service-migration
+      tag: "1.0"
+    driver:
+      repository: jhanviadmin/jhanvi-cars-driver-service-migration
+      tag: "1.0"
+    booking:
+      repository: jhanviadmin/jhanvi-cars-booking-service-migration
+      tag: "1.0"
+    vehicle:
+      repository: jhanviadmin/jhanvi-cars-vehicle-service-migration
+      tag: "1.0"
+    payment:
+      repository: jhanviadmin/jhanvi-cars-payment-service-migration
+      tag: "1.0"
+    notification:
+      repository: jhanviadmin/jhanvi-cars-notification-service-migration
+      tag: "1.0"
+
 
 services:
   apiGateway:
