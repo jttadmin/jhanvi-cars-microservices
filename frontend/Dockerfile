@@ -7,7 +7,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+
+RUN --mount=type=secret,id=frontend_env,target=/app/.env.local \
+    npm run build
 
 
 # Production stage

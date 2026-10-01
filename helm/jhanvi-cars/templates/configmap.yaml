@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jhanvi-cars-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" . | nindent 4 }}
+
+data:
+  NODE_ENV: "production"
+
+  AUTH_SERVICE_URL: "http://auth-service:{{ .Values.services.auth.port }}"
+  USER_SERVICE_URL: "http://user-service:{{ .Values.services.user.port }}"
+  DRIVER_SERVICE_URL: "http://driver-service:{{ .Values.services.driver.port }}"
+  BOOKING_SERVICE_URL: "http://booking-service:{{ .Values.services.booking.port }}"
+  VEHICLE_SERVICE_URL: "http://vehicle-service:{{ .Values.services.vehicle.port }}"
+  PAYMENT_SERVICE_URL: "http://payment-service:{{ .Values.services.payment.port }}"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:{{ .Values.services.notification.port }}"
+
+  MEMCACHED_HOST: "{{ .Values.memcached.host }}"
+  MEMCACHED_PORT: "{{ .Values.memcached.port }}"
+  MEMCACHED_TTL_SECONDS: "{{ .Values.memcached.ttlSeconds }}"
+
+  PROXY_TIMEOUT_MS: "5000"

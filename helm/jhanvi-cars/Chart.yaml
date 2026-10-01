@@ -1,0 +1,7 @@
+apiVersion: v2
+name: jhanvi-cars
+description: Helm chart for the Jhanvi Cars microservices platform
+type: application
+
+version: 0.1.0
+appVersion: "1.0.0"

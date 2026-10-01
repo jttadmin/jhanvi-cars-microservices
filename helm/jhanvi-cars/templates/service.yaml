@@ -1,0 +1,27 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name | kebabcase }}-service
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" $ | nindent 4 }}
+    app: {{ $name | kebabcase }}
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: {{ $name | kebabcase }}
+
+  ports:
+    - name: http
+      port: {{ $service.port }}
+      targetPort: http
+      protocol: TCP
+
+---
+{{- end }}
+{{- end }}

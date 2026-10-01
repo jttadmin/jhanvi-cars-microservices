@@ -1,0 +1,23 @@
+{{- if .Values.postgres.enabled }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "jhanvi-cars.labels" . | nindent 4 }}
+
+data:
+  01-init.sql: |
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+    CREATE SCHEMA IF NOT EXISTS auth_schema;
+    CREATE SCHEMA IF NOT EXISTS user_schema;
+    CREATE SCHEMA IF NOT EXISTS driver_schema;
+    CREATE SCHEMA IF NOT EXISTS booking_schema;
+    CREATE SCHEMA IF NOT EXISTS vehicle_schema;
+    CREATE SCHEMA IF NOT EXISTS payment_schema;
+    CREATE SCHEMA IF NOT EXISTS notification_schema;
+
+{{- end }}
