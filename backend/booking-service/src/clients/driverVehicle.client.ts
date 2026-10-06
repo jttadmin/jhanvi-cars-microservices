@@ -319,3 +319,51 @@ export async function getDriverByUserId(
     ) ?? null
   );
 }
+
+export interface NearbyDriver {
+  driverId: string;
+  distanceKm: number;
+  latitude: number;
+  longitude: number;
+  vehicleType:
+    | "AUTO"
+    | "ECONOMY"
+    | "COMFORT"
+    | "COMFORT_PLUS";
+  vehicleModel: string;
+}
+
+export async function findNearbyDrivers(
+  latitude: number,
+  longitude: number,
+  radiusKm = 5,
+  limit = 10
+): Promise<NearbyDriver[]> {
+  const driverBaseUrl =
+    process.env.DRIVER_SERVICE_URL ??
+    "http://localhost:3003";
+
+  const url =
+    `${driverBaseUrl}/drivers/nearby` +
+    `?latitude=${encodeURIComponent(latitude)}` +
+    `&longitude=${encodeURIComponent(longitude)}` +
+    `&radiusKm=${encodeURIComponent(radiusKm)}` +
+    `&limit=${encodeURIComponent(limit)}`;
+
+  const result =
+    await getJson(
+      url,
+      "Driver Service"
+    ) as {
+      drivers?: NearbyDriver[];
+    } | null;
+
+  if (!result || !Array.isArray(result.drivers)) {
+    throw new BookingError(
+      503,
+      "Driver Service returned an invalid nearby-driver response"
+    );
+  }
+
+  return result.drivers;
+}

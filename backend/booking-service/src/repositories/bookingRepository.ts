@@ -27,6 +27,18 @@ export class BookingRepository {
       pickupLocation:
         row.pickup_location,
 
+      pickupLatitude:
+        row.pickup_latitude === null ||
+        row.pickup_latitude === undefined
+          ? null
+          : Number(row.pickup_latitude),
+
+      pickupLongitude:
+        row.pickup_longitude === null ||
+        row.pickup_longitude === undefined
+          ? null
+          : Number(row.pickup_longitude),
+
       dropoffLocation:
         row.dropoff_location,
 
@@ -100,6 +112,12 @@ export class BookingRepository {
           pickup_location:
             booking.pickupLocation,
 
+          pickup_latitude:
+            booking.pickupLatitude ?? null,
+
+          pickup_longitude:
+            booking.pickupLongitude ?? null,
+
           dropoff_location:
             booking.dropoffLocation,
 
@@ -141,6 +159,12 @@ export class BookingRepository {
 
           pickup_location:
             booking.pickupLocation,
+
+          pickup_latitude:
+            booking.pickupLatitude ?? null,
+
+          pickup_longitude:
+            booking.pickupLongitude ?? null,
 
           dropoff_location:
             booking.dropoffLocation,

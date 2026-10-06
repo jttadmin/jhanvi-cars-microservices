@@ -29,6 +29,12 @@ export const createBookingSchema =
     pickupLocation:
       z.string().min(2),
 
+    pickupLatitude:
+      z.number().min(-90).max(90).nullable().optional(),
+
+    pickupLongitude:
+      z.number().min(-180).max(180).nullable().optional(),
+
     dropoffLocation:
       z.string().min(2),
 
@@ -59,6 +65,12 @@ export const updateBookingSchema =
 
     pickupLocation:
       z.string().min(2),
+
+    pickupLatitude:
+      z.number().min(-90).max(90).nullable().optional(),
+
+    pickupLongitude:
+      z.number().min(-180).max(180).nullable().optional(),
 
     dropoffLocation:
       z.string().min(2),
