@@ -5,6 +5,9 @@ import { DriverRepository } from "./repositories/driverRepository";
 import { DriverService } from "./services/driverService";
 import { DriverController } from "./controllers/driverController";
 import { createDriverRoutes } from "./routes/driverRoutes";
+import { DriverRideRequestRepository } from "./repositories/driverRideRequestRepository";
+import { DriverRideRequestService } from "./services/driverRideRequestService";
+import { DriverRideRequestController } from "./controllers/driverRideRequestController";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -15,6 +18,20 @@ app.use(express.json());
 const repository = new DriverRepository(db);
 const service = new DriverService(repository);
 const controller = new DriverController(service);
+
+const rideRequestRepository =
+  new DriverRideRequestRepository(db);
+
+const rideRequestService =
+  new DriverRideRequestService(
+    rideRequestRepository
+  );
+
+const rideRequestController =
+  new DriverRideRequestController(
+    rideRequestService,
+    service
+  );
 
 // Health check
 app.get("/health", async (_req, res) => {
@@ -36,7 +53,13 @@ app.get("/health", async (_req, res) => {
 });
 
 // Driver routes
-app.use("/drivers", createDriverRoutes(controller));
+app.use(
+  "/drivers",
+  createDriverRoutes(
+    controller,
+    rideRequestController
+  )
+);
 
 // Centralized error handler
 app.use(errorHandler);

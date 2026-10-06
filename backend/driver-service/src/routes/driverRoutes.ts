@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { DriverController } from "../controllers/driverController";
+import { DriverRideRequestController } from "../controllers/driverRideRequestController";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireInternalService } from "../middleware/internalAuth";
 import { requireAuth } from "../middleware/authMiddleware";
 
 export function createDriverRoutes(
-  controller: DriverController
+  controller: DriverController,
+  rideRequestController: DriverRideRequestController
 ): Router {
   const router = Router();
 
@@ -20,6 +22,7 @@ export function createDriverRoutes(
     requireAuth,
     asyncHandler(controller.getOwnProfile)
   );
+
   router.get(
     "/me/presence",
     requireAuth,
@@ -38,10 +41,44 @@ export function createDriverRoutes(
     asyncHandler(controller.updateOwnLocation)
   );
 
+  /*
+   * Nearby driver discovery
+   * Internal service only.
+   */
   router.get(
     "/nearby",
     requireInternalService,
     asyncHandler(controller.getNearbyDrivers)
+  );
+
+  /*
+   * Ride requests
+   *
+   * Booking Service creates offers internally.
+   * Driver accepts/rejects using authenticated driver JWT.
+   */
+  router.post(
+    "/ride-requests",
+    requireInternalService,
+    asyncHandler(rideRequestController.create)
+  );
+
+  router.get(
+    "/me/ride-requests",
+    requireAuth,
+    asyncHandler(rideRequestController.getMine)
+  );
+
+  router.patch(
+    "/me/ride-requests/:id/accept",
+    requireAuth,
+    asyncHandler(rideRequestController.accept)
+  );
+
+  router.patch(
+    "/me/ride-requests/:id/reject",
+    requireAuth,
+    asyncHandler(rideRequestController.reject)
   );
 
   router.get(
@@ -61,7 +98,6 @@ export function createDriverRoutes(
     requireInternalService,
     asyncHandler(controller.updateDriver)
   );
-
 
   router.patch(
     "/me/status",
