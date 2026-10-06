@@ -85,6 +85,7 @@ export class DriverService {
     return this.repository.findById(id);
   }
 
+
   async getNearbyDrivers(
     latitude: number,
     longitude: number,

@@ -25,6 +25,19 @@ export function createBookingRoutes(
     requireAuth
   );
 
+  router.patch(
+    "/internal/:id/driver-accepted",
+    asyncHandler(
+      controller.driverAccepted
+    )
+  );
+  router.patch(
+    "/internal/:id/driver-rejected",
+    asyncHandler(
+      controller.driverRejected
+    )
+  );
+
   router.get(
     "/",
     asyncHandler(

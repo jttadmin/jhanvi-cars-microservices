@@ -56,6 +56,18 @@ export class DriverRideRequestRepository {
     return rows.map((row) => this.mapRow(row));
   }
 
+  async findDriverIdsByBookingId(
+    bookingId: string
+  ): Promise<string[]> {
+    const rows = await this.db("driver_ride_requests")
+      .where("booking_id", bookingId)
+      .select("driver_id");
+
+    return rows.map(
+      (row) => String(row.driver_id)
+    );
+  }
+
   async findByIdForDriver(
     id: string,
     driverId: string

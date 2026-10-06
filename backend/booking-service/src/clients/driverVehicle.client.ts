@@ -201,6 +201,20 @@ export async function validateDriverAndVehicle(
   }
 }
 
+export async function validateDriverAndVehicleForAssignment(
+  driverId: string
+): Promise<void> {
+  const { vehicle } =
+    await getDriverAndVehicle(driverId);
+
+  if (vehicle.status !== "AVAILABLE") {
+    throw new BookingError(
+      409,
+      "Driver vehicle is not available"
+    );
+  }
+}
+
 export async function syncDriverVehicleForBooking(
   driverId: string,
   action: DriverVehicleAction
@@ -367,3 +381,83 @@ export async function findNearbyDrivers(
 
   return result.drivers;
 }
+export async function createRideRequest(
+  bookingId: string,
+  driverId: string,
+  pickupLatitude: number,
+  pickupLongitude: number,
+  expiresInSeconds = 30
+): Promise<any> {
+  const driverBaseUrl =
+    process.env.DRIVER_SERVICE_URL ??
+    "http://localhost:3003";
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${driverBaseUrl}/drivers/ride-requests`,
+      {
+        method: "POST",
+        headers: internalHeaders,
+        body: JSON.stringify({
+          bookingId,
+          driverId,
+          pickupLatitude,
+          pickupLongitude,
+          expiresInSeconds
+        })
+      }
+    );
+  } catch {
+    throw new BookingError(
+      503,
+      "Driver Service is unavailable"
+    );
+  }
+
+  if (!response.ok) {
+    throw new BookingError(
+      503,
+      `Driver Service returned HTTP ${response.status}`
+    );
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    throw new BookingError(
+      503,
+      "Driver Service returned an invalid ride-request response"
+    );
+  }
+}
+
+export async function getRideRequestDriverIds(
+  bookingId: string
+): Promise<string[]> {
+  const driverBaseUrl =
+    process.env.DRIVER_SERVICE_URL ??
+    "http://localhost:3003";
+
+  const result =
+    await getJson(
+      `${driverBaseUrl}/drivers/ride-requests/booking/${encodeURIComponent(bookingId)}/drivers`,
+      "Driver Service"
+    ) as {
+      driverIds?: string[];
+    } | null;
+
+  if (
+    !result ||
+    !Array.isArray(result.driverIds)
+  ) {
+    throw new BookingError(
+      503,
+      "Driver Service returned an invalid ride-request history response"
+    );
+  }
+
+  return result.driverIds;
+}
+

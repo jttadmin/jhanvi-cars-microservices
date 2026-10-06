@@ -25,6 +25,35 @@ export class DriverRideRequestController {
     }
   }
 
+  getDriverIdsByBookingId = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    const bookingId = String(req.params.bookingId);
+
+    if (!bookingId) {
+      res.status(400).json({ message: "bookingId is required" });
+      return;
+    }
+
+    try {
+      const driverIds =
+        await this.rideRequestService.getDriverIdsByBookingId(bookingId);
+
+      res.json({
+        bookingId,
+        driverIds,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to get ride-request history",
+      });
+    }
+  };
+
   getMine = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {

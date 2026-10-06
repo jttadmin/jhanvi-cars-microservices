@@ -64,6 +64,14 @@ export function createDriverRoutes(
   );
 
   router.get(
+    "/ride-requests/booking/:bookingId/drivers",
+    requireInternalService,
+    asyncHandler(
+      rideRequestController.getDriverIdsByBookingId
+    )
+  );
+
+  router.get(
     "/me/ride-requests",
     requireAuth,
     asyncHandler(rideRequestController.getMine)

@@ -310,6 +310,7 @@ export class DriverController {
   };
 
 
+
   getNearbyDrivers = async (
     req: Request,
     res: Response

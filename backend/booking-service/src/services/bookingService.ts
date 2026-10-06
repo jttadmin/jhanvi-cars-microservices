@@ -9,7 +9,11 @@ import {
 
 import {
   validateDriverAndVehicle,
-  syncDriverVehicleForBooking
+  validateDriverAndVehicleForAssignment,
+  syncDriverVehicleForBooking,
+  findNearbyDrivers,
+  createRideRequest,
+  getRideRequestDriverIds
 } from "../clients/driverVehicle.client";
 
 import {
@@ -56,10 +60,40 @@ export class BookingService {
       );
     }
 
-    return this.repository.create({
-	...booking,
-       status: "PENDING"
-    });
+    const createdBooking =
+      await this.repository.create({
+        ...booking,
+        status: "PENDING"
+      });
+
+    if (
+      !createdBooking.driverId &&
+      createdBooking.pickupLatitude != null &&
+      createdBooking.pickupLongitude != null
+    ) {
+      const nearbyDrivers =
+        await findNearbyDrivers(
+          createdBooking.pickupLatitude,
+          createdBooking.pickupLongitude,
+          5,
+          10
+        );
+
+      const nearestDriver =
+        nearbyDrivers[0];
+
+      if (nearestDriver) {
+        await createRideRequest(
+          createdBooking.id,
+          nearestDriver.driverId,
+          createdBooking.pickupLatitude,
+          createdBooking.pickupLongitude,
+          300
+        );
+      }
+    }
+
+    return createdBooking;
   }
 
   async updateBooking(
@@ -99,6 +133,120 @@ export class BookingService {
           existing.status
       }
     );
+  }
+
+  async confirmBookingFromDriver(
+    bookingId: string,
+    driverId: string
+  ): Promise<Booking | undefined> {
+
+    const existing =
+      await this.repository.findById(bookingId);
+
+    if (!existing) {
+      return undefined;
+    }
+
+    /*
+     * Idempotency:
+     * if the same driver callback is delivered again
+     * after confirmation, return the already-confirmed booking.
+     */
+    if (
+      existing.status === "CONFIRMED" &&
+      existing.driverId === driverId
+    ) {
+      return existing;
+    }
+
+    /*
+     * Only a pending booking can be claimed by
+     * the driver acceptance workflow.
+     */
+    if (existing.status !== "PENDING") {
+      throw new Error(
+        `Booking cannot be confirmed from status ${existing.status}`
+      );
+    }
+
+    /*
+     * Validate the driver before assigning the booking.
+     */
+    await validateDriverAndVehicleForAssignment(
+      driverId
+    );
+
+    return this.repository.update(
+      bookingId,
+      {
+        ...existing,
+        driverId,
+        status: "CONFIRMED"
+      }
+    );
+  }
+
+  async handleDriverRejected(
+    bookingId: string,
+    driverId: string
+  ): Promise<Booking | undefined> {
+
+    const existing =
+      await this.repository.findById(bookingId);
+
+    if (!existing) {
+      return undefined;
+    }
+
+    /*
+     * Only pending bookings can continue dispatching.
+     * If another driver already confirmed the booking,
+     * the rejection is no longer actionable.
+     */
+    if (existing.status !== "PENDING") {
+      return existing;
+    }
+
+    const previouslyOffered =
+      await getRideRequestDriverIds(
+        bookingId
+      );
+
+    const nearbyDrivers =
+      existing.pickupLatitude != null &&
+      existing.pickupLongitude != null
+        ? await findNearbyDrivers(
+            existing.pickupLatitude,
+            existing.pickupLongitude,
+            5,
+            10
+          )
+        : [];
+
+    const nextDriver =
+      nearbyDrivers.find(
+        (driver) =>
+          !previouslyOffered.includes(
+            driver.driverId
+          ) &&
+          driver.driverId !== driverId
+      );
+
+    if (
+      nextDriver &&
+      existing.pickupLatitude != null &&
+      existing.pickupLongitude != null
+    ) {
+      await createRideRequest(
+        bookingId,
+        nextDriver.driverId,
+        existing.pickupLatitude,
+        existing.pickupLongitude,
+        300
+      );
+    }
+
+    return existing;
   }
 
   async updateBookingStatus(

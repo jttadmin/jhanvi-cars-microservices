@@ -1,5 +1,9 @@
 import { DriverRideRequestRepository } from "../repositories/driverRideRequestRepository";
 import { DriverRideRequest } from "../types/driverRideRequest";
+import {
+  notifyBookingAccepted,
+  notifyBookingRejected
+} from "../clients/booking.client";
 
 export class DriverRideRequestService {
   constructor(
@@ -28,6 +32,14 @@ export class DriverRideRequestService {
     });
   }
 
+  async getDriverIdsByBookingId(
+    bookingId: string
+  ): Promise<string[]> {
+    return this.rideRequestRepository.findDriverIdsByBookingId(
+      bookingId
+    );
+  }
+
   async getDriverRideRequests(
     driverId: string
   ): Promise<DriverRideRequest[]> {
@@ -38,16 +50,22 @@ export class DriverRideRequestService {
     id: string,
     driverId: string
   ): Promise<DriverRideRequest> {
-    const request = await this.rideRequestRepository.acceptRideRequest(
-      id,
-      driverId
-    );
+    const request =
+      await this.rideRequestRepository.acceptRideRequest(
+        id,
+        driverId
+      );
 
     if (!request) {
       throw new Error(
         "Ride request is unavailable, expired, already handled, or driver is not available"
       );
     }
+
+    await notifyBookingAccepted(
+      request.bookingId,
+      request.driverId
+    );
 
     return request;
   }
@@ -56,16 +74,22 @@ export class DriverRideRequestService {
     id: string,
     driverId: string
   ): Promise<DriverRideRequest> {
-    const request = await this.rideRequestRepository.rejectRideRequest(
-      id,
-      driverId
-    );
+    const request =
+      await this.rideRequestRepository.rejectRideRequest(
+        id,
+        driverId
+      );
 
     if (!request) {
       throw new Error(
         "Ride request is unavailable, expired, or already handled"
       );
     }
+
+    await notifyBookingRejected(
+      request.bookingId,
+      request.driverId
+    );
 
     return request;
   }
