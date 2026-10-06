@@ -84,6 +84,12 @@ export function createDriverRoutes(
   );
 
   router.patch(
+    "/ride-requests/:id/expire",
+    requireInternalService,
+    asyncHandler(rideRequestController.expire)
+  );
+
+  router.patch(
     "/me/ride-requests/:id/reject",
     requireAuth,
     asyncHandler(rideRequestController.reject)

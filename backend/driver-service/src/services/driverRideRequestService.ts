@@ -2,7 +2,8 @@ import { DriverRideRequestRepository } from "../repositories/driverRideRequestRe
 import { DriverRideRequest } from "../types/driverRideRequest";
 import {
   notifyBookingAccepted,
-  notifyBookingRejected
+  notifyBookingRejected,
+  notifyBookingExpired
 } from "../clients/booking.client";
 
 export class DriverRideRequestService {
@@ -63,6 +64,24 @@ export class DriverRideRequestService {
     }
 
     await notifyBookingAccepted(
+      request.bookingId,
+      request.driverId
+    );
+
+    return request;
+  }
+
+  async expireRideRequest(
+    id: string
+  ): Promise<DriverRideRequest | null> {
+    const request =
+      await this.rideRequestRepository.expireRideRequest(id);
+
+    if (!request) {
+      return null;
+    }
+
+    await notifyBookingExpired(
       request.bookingId,
       request.driverId
     );

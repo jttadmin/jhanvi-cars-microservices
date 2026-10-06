@@ -32,6 +32,12 @@ export function createBookingRoutes(
     )
   );
   router.patch(
+    "/internal/:id/driver-expired",
+    asyncHandler(
+      controller.driverExpired
+    )
+  );
+  router.patch(
     "/internal/:id/driver-rejected",
     asyncHandler(
       controller.driverRejected

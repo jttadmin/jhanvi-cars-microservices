@@ -119,6 +119,34 @@ export class DriverRideRequestController {
     }
   }
 
+  expire = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+
+      const request =
+        await this.rideRequestService.expireRideRequest(id);
+
+      if (!request) {
+        res.status(404).json({
+          message: "Ride request is not offered or has not expired",
+        });
+        return;
+      }
+
+      res.json(request);
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to expire ride request",
+      });
+    }
+  }
+
   reject = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {

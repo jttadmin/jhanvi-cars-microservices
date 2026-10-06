@@ -124,6 +124,24 @@ export class DriverRideRequestRepository {
     });
   }
 
+  async expireRideRequest(
+    id: string
+  ): Promise<DriverRideRequest | null> {
+    const [row] = await this.db("driver_ride_requests")
+      .where({
+        id,
+        status: "OFFERED",
+      })
+      .where("expires_at", "<=", this.db.fn.now())
+      .update({
+        status: "EXPIRED",
+        responded_at: this.db.fn.now(),
+      })
+      .returning("*");
+
+    return row ? this.mapRow(row) : null;
+  }
+
   async rejectRideRequest(
     id: string,
     driverId: string

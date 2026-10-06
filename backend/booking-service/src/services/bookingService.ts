@@ -186,6 +186,48 @@ export class BookingService {
     );
   }
 
+  private async dispatchNextDriver(
+    booking: Booking,
+    excludedDriverId: string
+  ): Promise<void> {
+    if (
+      booking.pickupLatitude == null ||
+      booking.pickupLongitude == null
+    ) {
+      return;
+    }
+
+    const previouslyOffered =
+      await getRideRequestDriverIds(booking.id);
+
+    const nearbyDrivers =
+      await findNearbyDrivers(
+        booking.pickupLatitude,
+        booking.pickupLongitude,
+        5,
+        10
+      );
+
+    const nextDriver =
+      nearbyDrivers.find(
+        (driver) =>
+          !previouslyOffered.includes(driver.driverId) &&
+          driver.driverId !== excludedDriverId
+      );
+
+    if (!nextDriver) {
+      return;
+    }
+
+    await createRideRequest(
+      booking.id,
+      nextDriver.driverId,
+      booking.pickupLatitude,
+      booking.pickupLongitude,
+      300
+    );
+  }
+
   async handleDriverRejected(
     bookingId: string,
     driverId: string
@@ -207,44 +249,33 @@ export class BookingService {
       return existing;
     }
 
-    const previouslyOffered =
-      await getRideRequestDriverIds(
-        bookingId
-      );
+    await this.dispatchNextDriver(
+      existing,
+      driverId
+    );
 
-    const nearbyDrivers =
-      existing.pickupLatitude != null &&
-      existing.pickupLongitude != null
-        ? await findNearbyDrivers(
-            existing.pickupLatitude,
-            existing.pickupLongitude,
-            5,
-            10
-          )
-        : [];
+    return existing;
+  }
 
-    const nextDriver =
-      nearbyDrivers.find(
-        (driver) =>
-          !previouslyOffered.includes(
-            driver.driverId
-          ) &&
-          driver.driverId !== driverId
-      );
+  async handleDriverExpired(
+    bookingId: string,
+    driverId: string
+  ): Promise<Booking | undefined> {
+    const existing =
+      await this.repository.findById(bookingId);
 
-    if (
-      nextDriver &&
-      existing.pickupLatitude != null &&
-      existing.pickupLongitude != null
-    ) {
-      await createRideRequest(
-        bookingId,
-        nextDriver.driverId,
-        existing.pickupLatitude,
-        existing.pickupLongitude,
-        300
-      );
+    if (!existing) {
+      return undefined;
     }
+
+    if (existing.status !== "PENDING") {
+      return existing;
+    }
+
+    await this.dispatchNextDriver(
+      existing,
+      driverId
+    );
 
     return existing;
   }

@@ -318,6 +318,48 @@ export class BookingController {
       return res.json(booking);
     };
 
+  driverExpired =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      if (!req.internalService) {
+        return res.status(403).json({
+          message:
+            "Internal service authentication required"
+        });
+      }
+
+      const bookingId =
+        String(req.params.id);
+
+      const driverId =
+        String(req.body?.driverId ?? "");
+
+      if (!driverId) {
+        return res.status(400).json({
+          message:
+            "driverId is required"
+        });
+      }
+
+      const booking =
+        await this.service
+          .handleDriverExpired(
+            bookingId,
+            driverId
+          );
+
+      if (!booking) {
+        return res.status(404).json({
+          message: "Booking not found"
+        });
+      }
+
+      return res.json(booking);
+    };
+
   driverRejected =
     async (
       req: Request,

@@ -68,3 +68,36 @@ export async function notifyBookingRejected(
   }
 }
 
+
+export async function notifyBookingExpired(
+  bookingId: string,
+  driverId: string
+): Promise<void> {
+  const bookingBaseUrl =
+    process.env.BOOKING_SERVICE_URL ??
+    "http://localhost:3004";
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${bookingBaseUrl}/bookings/internal/${bookingId}/driver-expired`,
+      {
+        method: "PATCH",
+        headers: internalHeaders,
+        body: JSON.stringify({
+          driverId,
+        }),
+      }
+    );
+  } catch {
+    throw new Error("Booking Service is unavailable");
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Booking Service returned HTTP ${response.status}`
+    );
+  }
+}
+
