@@ -44,3 +44,10 @@ export const updateDriverLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180)
 });
+
+export const nearbyDriversQuerySchema = z.object({
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  radiusKm: z.coerce.number().min(0.1).max(50).default(5),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});

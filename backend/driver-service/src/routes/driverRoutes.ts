@@ -39,6 +39,12 @@ export function createDriverRoutes(
   );
 
   router.get(
+    "/nearby",
+    requireInternalService,
+    asyncHandler(controller.getNearbyDrivers)
+  );
+
+  router.get(
     "/:id",
     requireInternalService,
     asyncHandler(controller.getDriverById)

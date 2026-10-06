@@ -1,5 +1,5 @@
 import { Knex } from "knex";
-import { Driver } from "../types/driver";
+import { Driver, NearbyDriver } from "../types/driver";
 
 export class DriverRepository {
   private db: Knex;
@@ -155,4 +155,60 @@ export class DriverRepository {
 
     return this.mapDriver(row);
   }
+
+  async findNearbyDrivers(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    limit: number
+  ): Promise<NearbyDriver[]> {
+    const rows = await this.db("drivers")
+      .select([
+        "id",
+        "latitude",
+        "longitude",
+        "vehicle_type",
+        "vehicle_model",
+      ])
+      .where("is_online", true)
+      .where("is_available", true)
+      .whereNotNull("latitude")
+      .whereNotNull("longitude")
+      .select(
+        this.db.raw(
+          `6371 * 2 * ASIN(
+            SQRT(
+              POWER(SIN(RADIANS(latitude - ?) / 2), 2) +
+              COS(RADIANS(?)) *
+              COS(RADIANS(latitude)) *
+              POWER(SIN(RADIANS(longitude - ?) / 2), 2)
+            )
+          ) AS distance_km`,
+          [latitude, latitude, longitude]
+        )
+      )
+      .whereRaw(
+        `6371 * 2 * ASIN(
+          SQRT(
+            POWER(SIN(RADIANS(latitude - ?) / 2), 2) +
+            COS(RADIANS(?)) *
+            COS(RADIANS(latitude)) *
+            POWER(SIN(RADIANS(longitude - ?) / 2), 2)
+          )
+        ) <= ?`,
+        [latitude, latitude, longitude, radiusKm]
+      )
+      .orderBy("distance_km", "asc")
+      .limit(limit);
+
+    return rows.map((row) => ({
+      driverId: row.id,
+      distanceKm: Number(row.distance_km),
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+      vehicleType: row.vehicle_type,
+      vehicleModel: row.vehicle_model,
+    }));
+  }
+
 }

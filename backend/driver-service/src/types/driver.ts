@@ -22,3 +22,12 @@ export interface Driver {
   longitude?: number | null;
   lastLocationAt?: Date | null;
 }
+
+export interface NearbyDriver {
+  driverId: string;
+  distanceKm: number;
+  latitude: number;
+  longitude: number;
+  vehicleType: VehicleType;
+  vehicleModel: string;
+}

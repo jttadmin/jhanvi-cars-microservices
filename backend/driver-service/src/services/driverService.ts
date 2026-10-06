@@ -1,4 +1,4 @@
-import { Driver } from "../types/driver";
+import { Driver, NearbyDriver } from "../types/driver";
 import { DriverRepository } from "../repositories/driverRepository";
 
 export class DriverService {
@@ -83,5 +83,19 @@ export class DriverService {
     id: string
   ): Promise<Driver | undefined> {
     return this.repository.findById(id);
+  }
+
+  async getNearbyDrivers(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    limit: number
+  ): Promise<NearbyDriver[]> {
+    return this.repository.findNearbyDrivers(
+      latitude,
+      longitude,
+      radiusKm,
+      limit
+    );
   }
 }

@@ -7,6 +7,7 @@ import {
   updateDriverStatusSchema,
   updateDriverOnlineSchema,
   updateDriverLocationSchema,
+  nearbyDriversQuerySchema,
 } from "../types/driverSchema";
 
 export class DriverController {
@@ -305,6 +306,43 @@ export class DriverController {
       latitude: driver.latitude ?? null,
       longitude: driver.longitude ?? null,
       lastLocationAt: driver.lastLocationAt ?? null,
+    });
+  };
+
+
+  getNearbyDrivers = async (
+    req: Request,
+    res: Response
+  ) => {
+    const result = nearbyDriversQuerySchema.safeParse(req.query);
+
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Invalid nearby driver query",
+        errors: result.error.flatten(),
+      });
+    }
+
+    const {
+      latitude,
+      longitude,
+      radiusKm,
+      limit,
+    } = result.data;
+
+    const drivers = await this.service.getNearbyDrivers(
+      latitude,
+      longitude,
+      radiusKm,
+      limit
+    );
+
+    return res.json({
+      latitude,
+      longitude,
+      radiusKm,
+      count: drivers.length,
+      drivers,
     });
   };
 
