@@ -20,6 +20,10 @@ export class DriverRepository {
       vehicleType: row.vehicle_type,
       vehicleModel: row.vehicle_model,
       isAvailable: row.is_available,
+      isOnline: row.is_online,
+      latitude: row.latitude === null ? null : Number(row.latitude),
+      longitude: row.longitude === null ? null : Number(row.longitude),
+      lastLocationAt: row.last_location_at,
     };
   }
 
@@ -68,6 +72,10 @@ export class DriverRepository {
         vehicle_type: driver.vehicleType,
         vehicle_model: driver.vehicleModel,
         is_available: driver.isAvailable,
+        is_online: driver.isOnline ?? false,
+        latitude: driver.latitude ?? null,
+        longitude: driver.longitude ?? null,
+        last_location_at: driver.lastLocationAt ?? null,
       })
       .returning("*");
 
@@ -90,6 +98,53 @@ export class DriverRepository {
         vehicle_type: driver.vehicleType,
         vehicle_model: driver.vehicleModel,
         is_available: driver.isAvailable,
+        updated_at: this.db.fn.now(),
+      })
+      .returning("*");
+
+    if (!row) {
+      return undefined;
+    }
+
+    return this.mapDriver(row);
+  }
+
+  async updateOnline(
+    id: string,
+    isOnline: boolean
+  ): Promise<Driver | undefined> {
+    const updateData: Record<string, unknown> = {
+      is_online: isOnline,
+      updated_at: this.db.fn.now(),
+    };
+
+    if (!isOnline) {
+      updateData.is_available = false;
+    }
+
+    const [row] = await this.db("drivers")
+      .where({ id })
+      .update(updateData)
+      .returning("*");
+
+    if (!row) {
+      return undefined;
+    }
+
+    return this.mapDriver(row);
+  }
+
+  async updateLocation(
+    id: string,
+    latitude: number,
+    longitude: number
+  ): Promise<Driver | undefined> {
+    const [row] = await this.db("drivers")
+      .where({ id })
+      .update({
+        latitude,
+        longitude,
+        last_location_at: this.db.fn.now(),
         updated_at: this.db.fn.now(),
       })
       .returning("*");

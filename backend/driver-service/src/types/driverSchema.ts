@@ -35,3 +35,12 @@ export const updateDriverSchema = z.object({
 export const updateDriverStatusSchema = z.object({
   isAvailable: z.boolean(),
 });
+
+export const updateDriverOnlineSchema = z.object({
+  isOnline: z.boolean()
+});
+
+export const updateDriverLocationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180)
+});

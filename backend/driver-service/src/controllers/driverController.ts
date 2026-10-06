@@ -5,6 +5,8 @@ import {
   createDriverSchema,
   updateDriverSchema,
   updateDriverStatusSchema,
+  updateDriverOnlineSchema,
+  updateDriverLocationSchema,
 } from "../types/driverSchema";
 
 export class DriverController {
@@ -176,4 +178,134 @@ export class DriverController {
 
     return res.json(driver);
   };
+
+  updateOwnOnline = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    if (req.user.role !== "DRIVER") {
+      return res.status(403).json({
+        message: "Only drivers can update their online status",
+      });
+    }
+
+    const result = updateDriverOnlineSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Invalid online status data",
+        errors: result.error.flatten(),
+      });
+    }
+
+    const driver = await this.service.getDriverByUserId(req.user.sub);
+
+    if (!driver) {
+      return res.status(404).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    const updatedDriver = await this.service.updateDriverOnline(
+      driver.id,
+      result.data.isOnline
+    );
+
+    if (!updatedDriver) {
+      return res.status(404).json({
+        message: "Driver not found",
+      });
+    }
+
+    return res.json(updatedDriver);
+  };
+
+  updateOwnLocation = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    if (req.user.role !== "DRIVER") {
+      return res.status(403).json({
+        message: "Only drivers can update their location",
+      });
+    }
+
+    const result = updateDriverLocationSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Invalid location data",
+        errors: result.error.flatten(),
+      });
+    }
+
+    const driver = await this.service.getDriverByUserId(req.user.sub);
+
+    if (!driver) {
+      return res.status(404).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    const updatedDriver = await this.service.updateDriverLocation(
+      driver.id,
+      result.data.latitude,
+      result.data.longitude
+    );
+
+    if (!updatedDriver) {
+      return res.status(404).json({
+        message: "Driver not found",
+      });
+    }
+
+    return res.json(updatedDriver);
+  };
+
+  getOwnPresence = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    if (req.user.role !== "DRIVER") {
+      return res.status(403).json({
+        message: "Only drivers can access presence",
+      });
+    }
+
+    const driver = await this.service.getDriverByUserId(req.user.sub);
+
+    if (!driver) {
+      return res.status(404).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    return res.json({
+      driverId: driver.id,
+      isOnline: driver.isOnline ?? false,
+      isAvailable: driver.isAvailable,
+      latitude: driver.latitude ?? null,
+      longitude: driver.longitude ?? null,
+      lastLocationAt: driver.lastLocationAt ?? null,
+    });
+  };
+
 }

@@ -21,6 +21,24 @@ export function createDriverRoutes(
     asyncHandler(controller.getOwnProfile)
   );
   router.get(
+    "/me/presence",
+    requireAuth,
+    asyncHandler(controller.getOwnPresence)
+  );
+
+  router.patch(
+    "/me/online",
+    requireAuth,
+    asyncHandler(controller.updateOwnOnline)
+  );
+
+  router.patch(
+    "/me/location",
+    requireAuth,
+    asyncHandler(controller.updateOwnLocation)
+  );
+
+  router.get(
     "/:id",
     requireInternalService,
     asyncHandler(controller.getDriverById)

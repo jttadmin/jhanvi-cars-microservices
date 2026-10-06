@@ -15,4 +15,10 @@ export interface Driver {
   vehicleType: VehicleType;
   vehicleModel: string;
   isAvailable: boolean;
+
+  // Driver presence and live location
+  isOnline?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  lastLocationAt?: Date | null;
 }
