@@ -295,6 +295,28 @@ export class BookingController {
         .json(booking);
     };
 
+  getDriverRatingSummary =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      const driverId = req.params.driverId;
+
+      if (!driverId) {
+        return res.status(400).json({
+          message: "Driver ID is required"
+        });
+      }
+
+      const result =
+        await this.ratingService.getDriverRatingSummary(
+          driverId
+        );
+
+      return res.status(200).json(result);
+    };
+
   createDriverRating =
     async (
       req: Request,

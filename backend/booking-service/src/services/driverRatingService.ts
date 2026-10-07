@@ -116,6 +116,19 @@ export class DriverRatingService {
       });
   }
 
+  async getDriverRatingSummary(
+    driverId: string
+  ): Promise<{
+    averageRating: number;
+    totalRatings: number;
+  }> {
+
+    return this.ratingRepository
+      .getDriverRatingSummary(
+        driverId
+      );
+  }
+
   async getDriverRatings(
     driverId: string
   ): Promise<DriverRating[]> {

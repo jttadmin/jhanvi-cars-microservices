@@ -311,6 +311,29 @@ export class DriverController {
 
 
 
+  getDriverRatingSummary = async (
+    req: Request,
+    res: Response
+  ) => {
+    const driverId = req.params.id;
+
+    if (
+      !driverId ||
+      Array.isArray(driverId)
+    ) {
+      return res.status(400).json({
+        message: "Driver ID is required",
+      });
+    }
+
+    const result =
+      await this.service.getDriverRatingSummary(
+        driverId
+      );
+
+    return res.json(result);
+  };
+
   getNearbyDrivers = async (
     req: Request,
     res: Response

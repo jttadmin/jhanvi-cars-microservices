@@ -101,6 +101,12 @@ export function createDriverRoutes(
     asyncHandler(controller.getDriverById)
   );
 
+  router.get(
+    "/:id/rating-summary",
+    requireInternalService,
+    asyncHandler(controller.getDriverRatingSummary)
+  );
+
   router.post(
     "/",
     requireInternalService,

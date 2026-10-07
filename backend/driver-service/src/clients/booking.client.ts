@@ -101,3 +101,36 @@ export async function notifyBookingExpired(
   }
 }
 
+export async function getDriverRatingSummary(
+  driverId: string
+): Promise<{
+  averageRating: number;
+  totalRatings: number;
+}> {
+
+  const bookingBaseUrl =
+    process.env.BOOKING_SERVICE_URL ??
+    "http://localhost:3004";
+
+  const response = await fetch(
+    `${bookingBaseUrl}/bookings/internal/drivers/${driverId}/rating-summary`,
+    {
+      method: "GET",
+      headers: internalHeaders
+    }
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+
+    throw new Error(
+      `Failed to get driver rating summary: ${response.status} ${body}`
+    );
+  }
+
+  return response.json() as Promise<{
+    averageRating: number;
+    totalRatings: number;
+  }>;
+}
+

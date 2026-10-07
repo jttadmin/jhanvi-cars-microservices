@@ -104,6 +104,46 @@ export class DriverRatingRepository {
     return this.mapRating(row);
   }
 
+  async getDriverRatingSummary(
+    driverId: string
+  ): Promise<{
+    averageRating: number;
+    totalRatings: number;
+  }> {
+
+    const row =
+      await this.db
+        .withSchema("booking_schema")
+        .table("driver_ratings")
+        .where({
+          driver_id:
+            driverId
+        })
+        .select(
+          this.db.raw(
+            "COALESCE(AVG(rating), 0)::numeric as average_rating"
+          ),
+          this.db.raw(
+            "COUNT(*)::int as total_ratings"
+          )
+        )
+        .first();
+
+    return {
+      averageRating:
+        Number(
+          Number(
+            row?.average_rating ?? 0
+          ).toFixed(2)
+        ),
+
+      totalRatings:
+        Number(
+          row?.total_ratings ?? 0
+        )
+    };
+  }
+
   async findByDriverId(
     driverId: string
   ): Promise<DriverRating[]> {

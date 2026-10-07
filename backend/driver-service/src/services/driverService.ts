@@ -1,5 +1,6 @@
 import { Driver, NearbyDriver } from "../types/driver";
 import { DriverRepository } from "../repositories/driverRepository";
+import { getDriverRatingSummary } from "../clients/booking.client";
 
 export class DriverService {
   constructor(private repository: DriverRepository) {}
@@ -83,6 +84,15 @@ export class DriverService {
     id: string
   ): Promise<Driver | undefined> {
     return this.repository.findById(id);
+  }
+
+  async getDriverRatingSummary(
+    id: string
+  ): Promise<{
+    averageRating: number;
+    totalRatings: number;
+  }> {
+    return getDriverRatingSummary(id);
   }
 
 
