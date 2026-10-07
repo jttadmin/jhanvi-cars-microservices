@@ -238,12 +238,36 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
         <section className="earnings-card">
           <div>
-            <span className="summary-label">Completed rides</span>
-            <span className="summary-value">{completedCount}</span>
+            <span className="summary-label">Total trips</span>
+            <span className="summary-value">
+              {driverProfile?.earnings?.totalTrips ?? completedCount}
+            </span>
           </div>
           <div>
-            <span className="summary-label">Earnings</span>
-            <span className="summary-value fare">₹{earnings}</span>
+            <span className="summary-label">Total earnings</span>
+            <span className="summary-value fare">
+              ₹{driverProfile?.earnings?.totalEarnings ?? earnings}
+            </span>
+          </div>
+          <div>
+            <span className="summary-label">Today</span>
+            <span className="summary-value fare">
+              ₹{driverProfile?.earnings?.todayEarnings ?? 0}
+            </span>
+          </div>
+          <div>
+            <span className="summary-label">This week</span>
+            <span className="summary-value fare">
+              ₹{driverProfile?.earnings?.weekEarnings ?? 0}
+            </span>
+          </div>
+          <div>
+            <span className="summary-label">Rating</span>
+            <span className="summary-value">
+              {driverProfile?.rating
+                ? `${driverProfile.rating.averageRating.toFixed(1)} ★`
+                : '—'}
+            </span>
           </div>
         </section>
 

@@ -24,6 +24,22 @@ export interface DriverProfile {
   vehicleType: 'AUTO' | 'ECONOMY' | 'COMFORT' | 'COMFORT_PLUS';
   vehicleModel: string;
   isAvailable: boolean;
+  isOnline?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  lastLocationAt?: string | null;
+  rating?: {
+    averageRating: number;
+    totalRatings: number;
+  };
+  earnings?: {
+    totalTrips: number;
+    totalEarnings: number;
+    todayTrips: number;
+    todayEarnings: number;
+    weekTrips: number;
+    weekEarnings: number;
+  };
 }
 
 export async function getDriverProfile(): Promise<DriverProfile> {
