@@ -52,6 +52,13 @@ export function createBookingRoutes(
   );
 
   router.get(
+    "/me/earnings",
+    asyncHandler(
+      controller.getDriverEarnings
+    )
+  );
+
+  router.get(
     "/me/history",
     asyncHandler(
       controller.getDriverHistory

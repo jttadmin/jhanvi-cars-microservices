@@ -58,6 +58,21 @@ export class BookingService {
       .findByDriverId(driverId);
   }
 
+  async getDriverEarnings(
+    driverId: string
+  ): Promise<{
+    totalTrips: number;
+    totalEarnings: number;
+    todayTrips: number;
+    todayEarnings: number;
+    weekTrips: number;
+    weekEarnings: number;
+  }> {
+
+    return this.repository
+      .getDriverEarnings(driverId);
+  }
+
   async createBooking(
     booking: Booking
   ): Promise<Booking> {

@@ -95,6 +95,51 @@ export class BookingRepository {
     );
   }
 
+  async getDriverEarnings(
+    driverId: string
+  ): Promise<{
+    totalTrips: number;
+    totalEarnings: number;
+    todayTrips: number;
+    todayEarnings: number;
+    weekTrips: number;
+    weekEarnings: number;
+  }> {
+
+    const rows = await this.db("bookings")
+      .where({
+        driver_id: driverId,
+        status: "COMPLETED"
+      })
+      .select(
+        this.db.raw("COUNT(*)::int as total_trips"),
+        this.db.raw("COALESCE(SUM(fare), 0)::numeric as total_earnings"),
+        this.db.raw(
+          "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE)::int as today_trips"
+        ),
+        this.db.raw(
+          "COALESCE(SUM(fare) FILTER (WHERE created_at >= CURRENT_DATE), 0)::numeric as today_earnings"
+        ),
+        this.db.raw(
+          "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '6 days')::int as week_trips"
+        ),
+        this.db.raw(
+          "COALESCE(SUM(fare) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'), 0)::numeric as week_earnings"
+        )
+      );
+
+    const row = rows[0];
+
+    return {
+      totalTrips: Number(row.total_trips),
+      totalEarnings: Number(row.total_earnings),
+      todayTrips: Number(row.today_trips),
+      todayEarnings: Number(row.today_earnings),
+      weekTrips: Number(row.week_trips),
+      weekEarnings: Number(row.week_earnings)
+    };
+  }
+
   async findById(
     id: string
   ): Promise<
