@@ -7,8 +7,16 @@ import {
 } from "./repositories/bookingRepository";
 
 import {
+  DriverRatingRepository
+} from "./repositories/driverRatingRepository";
+
+import {
   BookingService
 } from "./services/bookingService";
+
+import {
+  DriverRatingService
+} from "./services/driverRatingService";
 
 import {
   BookingController
@@ -37,9 +45,21 @@ const service =
     repository
   );
 
+const ratingRepository =
+  new DriverRatingRepository(
+    db
+  );
+
+const ratingService =
+  new DriverRatingService(
+    ratingRepository,
+    repository
+  );
+
 const controller =
   new BookingController(
-    service
+    service,
+    ratingService
   );
 
 app.get(

@@ -12,6 +12,10 @@ import {
 } from "../services/bookingService";
 
 import {
+  DriverRatingService
+} from "../services/driverRatingService";
+
+import {
   createBookingSchema,
   updateBookingSchema,
   updateBookingStatusSchema
@@ -23,7 +27,10 @@ export class BookingController {
 
   constructor(
     private service:
-      BookingService
+      BookingService,
+
+    private ratingService:
+      DriverRatingService
   ) {}
 
   getAllBookings =
@@ -286,6 +293,81 @@ export class BookingController {
       return res
         .status(201)
         .json(booking);
+    };
+
+  createDriverRating =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      if (req.auth?.role !== "CUSTOMER") {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Only customers can rate drivers"
+          });
+      }
+
+      const customerId =
+        req.auth?.id;
+
+      if (!customerId) {
+        return res
+          .status(401)
+          .json({
+            message:
+              "Unauthorized"
+          });
+      }
+
+      const bookingId =
+        req.params.id;
+
+      const rating =
+        Number(req.body?.rating);
+
+      const comment =
+        req.body?.comment;
+
+      if (
+        !Number.isInteger(rating) ||
+        rating < 1 ||
+        rating > 5
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Rating must be an integer between 1 and 5"
+          });
+      }
+
+      if (
+        comment !== undefined &&
+        typeof comment !== "string"
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Comment must be a string"
+          });
+      }
+
+      const result =
+        await this.ratingService
+          .createRating(
+            bookingId,
+            customerId,
+            rating,
+            comment
+          );
+
+      return res
+        .status(201)
+        .json(result);
     };
 
   updateBooking =
