@@ -17,6 +17,33 @@ export class DriverService {
     return this.repository.findByUserId(userId);
   }
 
+  async getDriverProfileByUserId(
+    userId: string
+  ): Promise<
+    | (Driver & {
+        rating: {
+          averageRating: number;
+          totalRatings: number;
+        };
+      })
+    | undefined
+  > {
+    const driver =
+      await this.repository.findByUserId(userId);
+
+    if (!driver) {
+      return undefined;
+    }
+
+    const rating =
+      await getDriverRatingSummary(driver.id);
+
+    return {
+      ...driver,
+      rating,
+    };
+  }
+
   async createDriver(driver: Driver): Promise<Driver> {
     return this.repository.create(driver);
   }

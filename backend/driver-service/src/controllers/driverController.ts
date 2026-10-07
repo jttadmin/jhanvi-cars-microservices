@@ -90,7 +90,10 @@ export class DriverController {
       });
     }
 
-    const driver = await this.service.getDriverByUserId(req.user.sub);
+    const driver =
+      await this.service.getDriverProfileByUserId(
+        req.user.sub
+      );
 
     console.log("[GET /drivers/me] userId:", req.user.sub);
     console.log("[GET /drivers/me] driverFound:", Boolean(driver));
