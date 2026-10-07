@@ -1,6 +1,9 @@
 import { Driver, NearbyDriver } from "../types/driver";
 import { DriverRepository } from "../repositories/driverRepository";
-import { getDriverRatingSummary } from "../clients/booking.client";
+import {
+  getDriverRatingSummary,
+  getDriverEarnings
+} from "../clients/booking.client";
 
 export class DriverService {
   constructor(private repository: DriverRepository) {}
@@ -25,6 +28,14 @@ export class DriverService {
           averageRating: number;
           totalRatings: number;
         };
+        earnings: {
+          totalTrips: number;
+          totalEarnings: number;
+          todayTrips: number;
+          todayEarnings: number;
+          weekTrips: number;
+          weekEarnings: number;
+        };
       })
     | undefined
   > {
@@ -38,9 +49,13 @@ export class DriverService {
     const rating =
       await getDriverRatingSummary(driver.id);
 
+    const earnings =
+      await getDriverEarnings(driver.id);
+
     return {
       ...driver,
       rating,
+      earnings,
     };
   }
 

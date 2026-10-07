@@ -134,3 +134,44 @@ export async function getDriverRatingSummary(
   }>;
 }
 
+export async function getDriverEarnings(
+  driverId: string
+): Promise<{
+  totalTrips: number;
+  totalEarnings: number;
+  todayTrips: number;
+  todayEarnings: number;
+  weekTrips: number;
+  weekEarnings: number;
+}> {
+
+  const bookingBaseUrl =
+    process.env.BOOKING_SERVICE_URL ??
+    "http://localhost:3004";
+
+  const response = await fetch(
+    `${bookingBaseUrl}/bookings/internal/drivers/${driverId}/earnings`,
+    {
+      method: "GET",
+      headers: internalHeaders
+    }
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+
+    throw new Error(
+      `Failed to get driver earnings: ${response.status} ${body}`
+    );
+  }
+
+  return response.json() as Promise<{
+    totalTrips: number;
+    totalEarnings: number;
+    todayTrips: number;
+    todayEarnings: number;
+    weekTrips: number;
+    weekEarnings: number;
+  }>;
+}
+

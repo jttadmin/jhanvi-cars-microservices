@@ -72,6 +72,13 @@ export function createBookingRoutes(
     )
   );
 
+  router.get(
+    "/internal/drivers/:driverId/earnings",
+    asyncHandler(
+      controller.getDriverEarningsInternal
+    )
+  );
+
   router.post(
     "/:id/rating",
     asyncHandler(

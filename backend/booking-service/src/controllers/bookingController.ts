@@ -153,6 +153,29 @@ export class BookingController {
       return res.json(earnings);
     };
 
+  getDriverEarningsInternal =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      const driverId =
+        req.params.driverId;
+
+      if (!driverId || Array.isArray(driverId)) {
+        return res.status(400).json({
+          message: "Driver ID is required"
+        });
+      }
+
+      const earnings =
+        await this.service.getDriverEarnings(
+          driverId
+        );
+
+      return res.json(earnings);
+    };
+
   getDriverHistory =
     async (
       req: Request,
