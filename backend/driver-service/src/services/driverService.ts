@@ -2,7 +2,8 @@ import { Driver, NearbyDriver } from "../types/driver";
 import { DriverRepository } from "../repositories/driverRepository";
 import {
   getDriverRatingSummary,
-  getDriverEarnings
+  getDriverEarnings,
+  getDriverHistory
 } from "../clients/booking.client";
 
 export class DriverService {
@@ -57,6 +58,19 @@ export class DriverService {
       rating,
       earnings,
     };
+  }
+
+  async getDriverHistoryByUserId(
+    userId: string
+  ) {
+    const driver =
+      await this.repository.findByUserId(userId);
+
+    if (!driver) {
+      return undefined;
+    }
+
+    return getDriverHistory(driver.id);
   }
 
   async createDriver(driver: Driver): Promise<Driver> {

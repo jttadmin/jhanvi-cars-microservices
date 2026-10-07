@@ -79,6 +79,13 @@ export function createBookingRoutes(
     )
   );
 
+  router.get(
+    "/internal/drivers/:driverId/history",
+    asyncHandler(
+      controller.getDriverHistoryInternal
+    )
+  );
+
   router.post(
     "/:id/rating",
     asyncHandler(

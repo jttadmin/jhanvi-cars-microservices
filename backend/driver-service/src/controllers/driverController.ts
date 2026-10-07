@@ -107,6 +107,36 @@ export class DriverController {
     return res.json(driver);
   };
 
+  getOwnHistory = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required",
+      });
+    }
+
+    if (req.user.role !== "DRIVER") {
+      return res.status(403).json({
+        message: "Only drivers can access trip history",
+      });
+    }
+
+    const history =
+      await this.service.getDriverHistoryByUserId(
+        req.user.sub
+      );
+
+    if (!history) {
+      return res.status(404).json({
+        message: "Driver profile not found",
+      });
+    }
+
+    return res.json(history);
+  };
+
   updateOwnStatus = async (
     req: AuthenticatedRequest,
     res: Response

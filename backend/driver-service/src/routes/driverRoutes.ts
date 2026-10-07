@@ -24,6 +24,12 @@ export function createDriverRoutes(
   );
 
   router.get(
+    "/me/history",
+    requireAuth,
+    asyncHandler(controller.getOwnHistory)
+  );
+
+  router.get(
     "/me/presence",
     requireAuth,
     asyncHandler(controller.getOwnPresence)

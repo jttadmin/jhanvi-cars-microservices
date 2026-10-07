@@ -176,6 +176,29 @@ export class BookingController {
       return res.json(earnings);
     };
 
+  getDriverHistoryInternal =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      const driverId =
+        req.params.driverId;
+
+      if (!driverId || Array.isArray(driverId)) {
+        return res.status(400).json({
+          message: "Driver ID is required"
+        });
+      }
+
+      const bookings =
+        await this.service.getBookingsByDriverId(
+          driverId
+        );
+
+      return res.json(bookings);
+    };
+
   getDriverHistory =
     async (
       req: Request,
