@@ -13,6 +13,24 @@ export async function setAvailability(isAvailable: boolean): Promise<void> {
 // GET /api/drivers/me here if/when the backend adds one.
 
     
+
+export async function setOnline(isOnline: boolean): Promise<void> {
+  await apiRequest<void>('/drivers/me/online', {
+    method: 'PATCH',
+    body: { isOnline },
+  });
+}
+
+export async function updateLocation(
+  latitude: number,
+  longitude: number
+): Promise<void> {
+  await apiRequest<void>('/drivers/me/location', {
+    method: 'PATCH',
+    body: { latitude, longitude },
+  });
+}
+
 export interface DriverProfile {
   id: string;
   userId?: string | null;
@@ -44,4 +62,32 @@ export interface DriverProfile {
 
 export async function getDriverProfile(): Promise<DriverProfile> {
   return apiRequest<DriverProfile>('/drivers/me');
+}
+
+export interface DriverRideRequest {
+  id: string;
+  bookingId: string;
+  driverId: string;
+  pickupLatitude: number;
+  pickupLongitude: number;
+  status: 'OFFERED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+  createdAt: string;
+  expiresAt: string;
+  respondedAt?: string | null;
+}
+
+export async function getRideRequests(): Promise<DriverRideRequest[]> {
+  return apiRequest<DriverRideRequest[]>('/drivers/me/ride-requests');
+}
+
+export async function acceptRideRequest(id: string): Promise<DriverRideRequest> {
+  return apiRequest<DriverRideRequest>(`/drivers/me/ride-requests/${id}/accept`, {
+    method: 'PATCH',
+  });
+}
+
+export async function rejectRideRequest(id: string): Promise<DriverRideRequest> {
+  return apiRequest<DriverRideRequest>(`/drivers/me/ride-requests/${id}/reject`, {
+    method: 'PATCH',
+  });
 }

@@ -445,3 +445,523 @@
   display: none;
 }
 
+
+/* Driver live location status */
+.location-sharing-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 14px;
+  padding: 7px 12px;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.10);
+}
+
+.location-sharing-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.location-sharing-label {
+  font-weight: 600;
+}
+
+.location-sharing-state {
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.location-sharing-status .status-on {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.location-sharing-status .status-off {
+  color: #b45309;
+  font-weight: 800;
+}
+
+.location-sharing-error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.10);
+}
+
+.location-sharing-error .location-sharing-state {
+  color: #dc2626;
+}
+
+/* Driver dashboard header */
+.driver-header {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px max(24px, calc((100vw - 860px) / 2 + 22px));
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.driver-header > span {
+  display: flex;
+  align-items: center;
+}
+
+
+/* Position driver dashboard toward the right side */
+.driver-body {
+  margin-left: auto;
+  margin-right: 24px;
+}
+
+@media (max-width: 900px) {
+  .driver-body {
+    margin-left: 24px;
+    margin-right: 24px;
+  }
+}
+
+/* =========================================================
+   JHANVI CARS — PREMIUM DRIVER CONSOLE
+   Visual layer only
+   ========================================================= */
+
+.driver-screen {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(31,111,92,.10), transparent 28%),
+    radial-gradient(circle at 5% 25%, rgba(255,197,61,.08), transparent 24%),
+    #f8f9f7;
+}
+
+/* Header */
+.driver-header {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px max(22px, calc((100vw - 860px) / 2 + 22px));
+  background: rgba(255,255,255,.88);
+  border-bottom: 1px solid rgba(20,23,31,.08);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.driver-header .brand {
+  font-size: 21px;
+  letter-spacing: -.03em;
+}
+
+.header-right {
+  gap: 10px;
+}
+
+/* Main dashboard */
+.driver-body {
+  width: 100%;
+  max-width: 860px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 28px 22px 40px;
+  gap: 18px;
+}
+
+/* Driver identity card */
+.driver-profile-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 86px;
+  padding: 22px 24px;
+  border: 1px solid rgba(20,23,31,.08);
+  border-radius: 22px;
+  background: rgba(255,255,255,.94);
+  box-shadow:
+    0 18px 45px -30px rgba(20,23,31,.45),
+    0 2px 8px rgba(20,23,31,.04);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.driver-profile-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #1f6f5c, #2f9278);
+}
+
+.driver-profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 50px -30px rgba(20,23,31,.5),
+    0 4px 12px rgba(20,23,31,.05);
+}
+
+.driver-profile-card .panel-heading {
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+
+/* Online control */
+.availability-toggle {
+  padding: 8px 11px 8px 14px;
+  border: 1px solid rgba(20,23,31,.08);
+  border-radius: 999px;
+  background: #f8faf9;
+  box-shadow: inset 0 1px 2px rgba(20,23,31,.03);
+}
+
+.toggle-switch {
+  width: 48px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle-switch .toggle-knob {
+  width: 22px;
+  height: 22px;
+  top: 3px;
+  left: 3px;
+}
+
+.toggle-switch.on {
+  background: #1f6f5c;
+  box-shadow: 0 5px 14px rgba(31,111,92,.28);
+}
+
+.toggle-switch.on .toggle-knob {
+  transform: translateX(20px);
+}
+
+/* Live location */
+.location-sharing-status {
+  align-self: flex-end;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -5px 0 0 auto;
+  padding: 9px 14px;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: linear-gradient(180deg,#f0fdf4,#ecfdf5);
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  box-shadow: 0 5px 16px rgba(22,163,74,.09);
+}
+
+.location-sharing-icon {
+  font-size: 14px;
+}
+
+.location-sharing-state,
+.location-sharing-status .status-on {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.location-sharing-status .status-off {
+  color: #b45309;
+  font-weight: 800;
+}
+
+.location-sharing-error {
+  border-color: #fca5a5;
+  background: linear-gradient(180deg,#fff1f2,#fef2f2);
+  color: #dc2626;
+  box-shadow: 0 5px 16px rgba(220,38,38,.08);
+}
+
+.location-sharing-error .location-sharing-state {
+  color: #dc2626;
+}
+
+/* Earnings */
+.earnings-card {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  margin-top: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(31,111,92,.12);
+  border-radius: 20px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 16px 38px -30px rgba(20,23,31,.45);
+}
+
+.earnings-card > div {
+  padding: 20px 18px;
+  border-right: 1px solid rgba(20,23,31,.06);
+}
+
+.earnings-card > div:last-child {
+  border-right: none;
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #7a827e;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.summary-value {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.summary-value.fare {
+  color: #1f6f5c;
+}
+
+/* Ride section */
+.rides-section {
+  margin-top: 4px;
+}
+
+.rides-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(20,23,31,.08);
+}
+
+.rides-tabs button {
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid rgba(20,23,31,.10);
+  border-radius: 999px;
+  background: rgba(255,255,255,.8);
+  color: #5d6661;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+
+.rides-tabs button:hover {
+  border-color: rgba(31,111,92,.3);
+  color: #1f6f5c;
+  transform: translateY(-1px);
+}
+
+.rides-tabs button.active {
+  border-color: #1f6f5c;
+  background: #1f6f5c;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(31,111,92,.22);
+}
+
+/* Ride cards */
+.rides-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ride-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px 20px;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(20,23,31,.09);
+  border-radius: 18px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 10px 30px -24px rgba(20,23,31,.45);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+
+.ride-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 35px -25px rgba(20,23,31,.5);
+}
+
+.ride-route {
+  display: grid;
+  gap: 8px;
+}
+
+.ride-point {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #39423e;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.location-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+}
+
+.ride-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  font-weight: 750;
+}
+
+.ride-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ride-actions button {
+  min-width: 92px;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 999px;
+  background: #1f6f5c;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(31,111,92,.20);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.ride-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 20px rgba(31,111,92,.27);
+}
+
+.ride-actions button:disabled {
+  opacity: .55;
+  cursor: wait;
+  transform: none;
+}
+
+/* Status */
+.status-pill {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  .driver-header {
+    padding: 12px 16px;
+  }
+
+  .driver-body {
+    padding: 18px 14px 30px;
+  }
+
+  .earnings-card {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .earnings-card > div {
+    border-bottom: 1px solid rgba(20,23,31,.06);
+  }
+
+  .earnings-card > div:nth-child(2n) {
+    border-right: none;
+  }
+
+  .earnings-card > div:last-child {
+    grid-column: 1 / -1;
+    border-bottom: none;
+  }
+
+  .ride-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ride-meta {
+    justify-content: flex-start;
+  }
+
+  .ride-actions {
+    justify-content: stretch;
+  }
+
+  .ride-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .driver-header .brand {
+    font-size: 18px;
+  }
+
+  .role-pill {
+    display: none;
+  }
+
+  .profile-button {
+    min-width: 135px;
+  }
+
+  .driver-profile-card {
+    padding: 18px;
+  }
+
+  .driver-profile-card .panel-heading {
+    font-size: 19px;
+  }
+
+  .availability-toggle {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+
+  .location-sharing-status {
+    align-self: flex-start;
+    margin-left: 0;
+  }
+}
+
+/* Keep driver profile at the top-right corner */
+.driver-header {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.driver-header .header-right {
+  margin-left: auto;
+}
+
+.driver-header .profile-menu {
+  margin-left: 0;
+}
+
+.driver-header .profile-dropdown {
+  right: 0;
+  left: auto;
+}
+
+@media (max-width: 640px) {
+  .driver-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

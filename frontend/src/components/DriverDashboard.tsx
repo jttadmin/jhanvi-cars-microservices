@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getMe } from '../api/auth';
-import { setAvailability, getDriverProfile, type DriverProfile } from '../api/drivers';
+import { setAvailability, setOnline, updateLocation, getDriverProfile, type DriverProfile } from '../api/drivers';
 import { getBookings, acceptBooking, startBooking, completeBooking } from '../api/bookings';
 import { ApiError } from '../api/client';
 import { formatStatus } from '../utils/format';
-import BrandMark from './BrandMark';
 import type { AuthUser, Booking } from '../types';
 import './DriverDashboard.css';
 
@@ -21,6 +20,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const [isAvailable, setIsAvailable] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationTracking, setLocationTracking] = useState(false);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [ridesLoading, setRidesLoading] = useState(true);
@@ -47,8 +48,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       });
   }, []);
 
-  function loadRides() {
-    setRidesLoading(true);
+  function loadRides(showLoading = false) {
+    if (showLoading) setRidesLoading(true);
     setRidesError(null);
     getBookings()
       .then(setBookings)
@@ -56,7 +57,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       .finally(() => setRidesLoading(false));
   }
 
-  useEffect(loadRides, []);
+  useEffect(() => { loadRides(true); }, []);
 
   // Keep the driver's ride list in sync with new customer bookings
   // and booking status changes.
@@ -72,21 +73,111 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
   async function toggleAvailability() {
     if (availabilityLoading) return;
+
     const next = !isAvailable;
     setAvailabilityLoading(true);
     setAvailabilityError(null);
+    setLocationError(null);
+
     try {
       await setAvailability(next);
+      await setOnline(next);
+
       setIsAvailable(next);
       setDriverProfile((current) =>
-        current ? { ...current, isAvailable: next } : current
+        current
+          ? { ...current, isAvailable: next, isOnline: next }
+          : current
       );
+
+      if (!next) {
+        setLocationTracking(false);
+      }
     } catch (err) {
-      setAvailabilityError(err instanceof ApiError ? err.message : 'Could not update your availability.');
+      setAvailabilityError(
+        err instanceof ApiError
+          ? err.message
+          : 'Could not update your availability.'
+      );
     } finally {
       setAvailabilityLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!isAvailable) {
+      setLocationTracking(false);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError('Location services are not supported by this browser.');
+      setLocationTracking(false);
+      return;
+    }
+
+    let active = true;
+
+    const sendLocation = (position: GeolocationPosition) => {
+      if (!active) return;
+
+      const { latitude, longitude } = position.coords;
+
+      updateLocation(latitude, longitude)
+        .then(() => {
+          if (active) {
+            setLocationTracking(true);
+            setLocationError(null);
+            setDriverProfile((current) =>
+              current
+                ? {
+                    ...current,
+                    latitude,
+                    longitude,
+                    lastLocationAt: new Date().toISOString(),
+                  }
+                : current
+            );
+          }
+        })
+        .catch((err) => {
+          if (active) {
+            setLocationError(
+              err instanceof ApiError
+                ? err.message
+                : 'Could not update your location.'
+            );
+          }
+        });
+    };
+
+    const handleLocationError = (error: GeolocationPositionError) => {
+      if (!active) return;
+
+      setLocationTracking(false);
+      setLocationError(
+        error.code === error.PERMISSION_DENIED
+          ? 'Location permission is required while you are online.'
+          : 'Could not determine your current location.'
+      );
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+      sendLocation,
+      handleLocationError,
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 15000,
+      }
+    );
+
+    return () => {
+      active = false;
+      navigator.geolocation.clearWatch(watchId);
+      setLocationTracking(false);
+    };
+  }, [isAvailable]);
 
   async function handleAction(id: string, action: 'accept' | 'start' | 'complete') {
     setActionLoadingId(id);
@@ -130,11 +221,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const completedCount = bookings.filter((b) => b.status === 'COMPLETED').length;
   const earnings = bookings.filter((b) => b.status === 'COMPLETED').reduce((sum, b) => sum + b.fare, 0);
 
+
   return (
-    <div className="driver-screen">
-      <header className="dashboard-header">
-        <span className="brand-row">
-          <BrandMark />
+    <div className="driver-dashboard">
+      <header className="driver-header">
+        <span>
           <span className="brand">Jhanvi Cars</span>
         </span>
         <div className="header-right">
@@ -233,8 +324,27 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
             </button>
           </div>
         </section>
+
         {availabilityLoading && <p className="hint-text">Updating availability…</p>}
         {availabilityError && <p className="error-text">{availabilityError}</p>}
+
+        {locationError && (
+          <div className="location-sharing-status location-sharing-error">
+            <span className="location-sharing-icon">📍</span>
+            <span className="location-sharing-label">Location</span>
+            <span className="location-sharing-state">OFF</span>
+          </div>
+        )}
+
+        {isAvailable && !locationError && (
+          <div className="location-sharing-status">
+            <span className="location-sharing-icon">📍</span>
+            <span className="location-sharing-label">Location</span>
+            <span className={locationTracking ? 'status-on' : 'status-off'}>
+              {locationTracking ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        )}
 
         <section className="earnings-card">
           <div>
