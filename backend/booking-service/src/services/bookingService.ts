@@ -50,6 +50,14 @@ export class BookingService {
       .findById(id);
   }
 
+  async getBookingsByDriverId(
+    driverId: string
+  ): Promise<Booking[]> {
+
+    return this.repository
+      .findByDriverId(driverId);
+  }
+
   async createBooking(
     booking: Booking
   ): Promise<Booking> {

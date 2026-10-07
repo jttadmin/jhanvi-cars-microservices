@@ -52,6 +52,13 @@ export function createBookingRoutes(
   );
 
   router.get(
+    "/me/history",
+    asyncHandler(
+      controller.getDriverHistory
+    )
+  );
+
+  router.get(
     "/:id",
     asyncHandler(
       controller.getBookingById

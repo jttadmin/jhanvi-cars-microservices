@@ -75,6 +75,26 @@ export class BookingRepository {
     );
   }
 
+  async findByDriverId(
+    driverId: string
+  ): Promise<Booking[]> {
+
+    const rows =
+      await this.db("bookings")
+        .where({
+          driver_id: driverId
+        })
+        .orderBy(
+          "created_at",
+          "desc"
+        );
+
+    return rows.map(
+      (row) =>
+        this.mapBooking(row)
+    );
+  }
+
   async findById(
     id: string
   ): Promise<

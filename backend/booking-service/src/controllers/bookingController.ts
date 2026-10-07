@@ -98,6 +98,54 @@ export class BookingController {
       );
     };
 
+  getDriverHistory =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+
+      if (req.auth?.role !== "DRIVER") {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Only drivers can access driver history"
+          });
+      }
+
+      const userId =
+        req.auth?.id;
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json({
+            message:
+              "Unauthorized"
+          });
+      }
+
+      const driver =
+        await getDriverByUserId(userId);
+
+      if (!driver) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Authenticated driver is not registered"
+          });
+      }
+
+      const bookings =
+        await this.service
+          .getBookingsByDriverId(
+            driver.id
+          );
+
+      return res.json(bookings);
+    };
+
   getBookingById =
     async (
       req: Request,
