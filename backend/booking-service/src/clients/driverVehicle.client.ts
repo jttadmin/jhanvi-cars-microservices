@@ -153,6 +153,10 @@ async function getDriverAndVehicle(
   const vehicle =
     vehicles.find(
       (item) =>
+        item.driverId === driver.id
+    ) ??
+    vehicles.find(
+      (item) =>
         item.registrationNumber ===
         driver.vehicleNumber
     );
