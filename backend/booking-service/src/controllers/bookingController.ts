@@ -565,15 +565,6 @@ export class BookingController {
           });
       }
 
-      if (!driver.isAvailable) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Driver is not available"
-          });
-      }
-
       if (!booking.driverId) {
         const assigned =
           await this.service.updateBooking(id, {
@@ -695,15 +686,6 @@ export class BookingController {
           .json({
             message:
               "Booking is assigned to another driver"
-          });
-      }
-
-      if (!driver.isAvailable) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Driver is not available"
           });
       }
 

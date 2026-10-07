@@ -231,13 +231,6 @@ export async function syncDriverVehicleForBooking(
     await getDriverAndVehicle(driverId);
 
   if (action === "START_TRIP") {
-    if (!driver.isAvailable) {
-      throw new BookingError(
-        409,
-        "Driver is not available to start the trip"
-      );
-    }
-
     if (vehicle.status !== "AVAILABLE") {
       throw new BookingError(
         409,
