@@ -1,0 +1,467 @@
+How I would investigate
+1. First, define the scope
+
+I would check:
+
+Is the slowness affecting all users or only some users?
+Which endpoints/APIs are slow?
+When did the issue start?
+Was there a recent deployment or configuration change?
+Is latency increasing while traffic remains normal?
+
+I would start with RED metrics:
+
+Rate – Requests per second
+Errors – Error rate
+Duration – Response latency
+2. Check application-level metrics
+
+Even with CPU at 30%, I would check:
+
+Response time (p50, p95, p99)
+Request throughput
+Error rates
+JVM heap usage
+Garbage collection pauses
+Thread pool utilization
+Active vs blocked threads
+Connection pool usage
+
+Example:
+
+CPU: 30% ✅
+Memory: 70%
+p99 latency: 8 seconds ❌
+DB connection pool: 100% utilized ❌
+
+This immediately suggests the bottleneck may be the database connection pool rather than CPU.
+
+3. Check thread pools and thread dumps
+
+For a Java application, I would investigate:
+
+Are application threads blocked?
+Are threads waiting on database connections?
+Are there deadlocks?
+Is the HTTP worker thread pool exhausted?
+Are threads waiting on external API calls?
+
+Commands/tools:
+
+jstack <PID>
+
+Look for states like:
+
+BLOCKED
+WAITING
+TIMED_WAITING
+
+A common production issue:
+
+CPU is low because threads are waiting, not processing.
+
+4. Investigate the database
+
+Database is often the biggest source of application slowness.
+
+I would check:
+
+Slow queries
+Query execution time
+Database CPU
+Connection count
+Connection pool exhaustion
+Lock waits
+Missing indexes
+Deadlocks
+Disk I/O latency
+
+For MySQL:
+
+SHOW PROCESSLIST;
+
+Check slow query logs:
+
+tail -f /var/log/mysql/slow-query.log
+
+Example scenario:
+
+Application CPU: 30%
+DB CPU: 95%
+Slow query: SELECT taking 8 seconds
+
+The application appears underutilized because it is waiting for the database.
+
+5. Check memory and GC
+
+For Java applications, CPU can be low while the application suffers from:
+
+High heap utilization
+Long Full GC pauses
+Memory pressure
+Container memory limits
+
+I would check:
+
+free -m
+
+JVM metrics:
+
+Heap usage
+Non-heap memory
+GC pause duration
+GC frequency
+
+Prometheus metrics example:
+
+jvm_memory_used_bytes
+jvm_gc_pause_seconds
+
+A Full GC pause can cause high latency without sustained high CPU.
+
+6. Check Disk I/O
+
+The server may be waiting for disk operations.
+
+Use:
+
+iostat -xz 1
+
+Check:
+
+%util
+await
+Disk latency
+
+Also:
+
+iotop
+
+Example:
+
+CPU: 30%
+Disk utilization: 100%
+I/O wait: High
+
+This indicates an I/O bottleneck.
+
+7. Check network latency
+
+I would investigate communication between:
+
+Client
+   ↓
+Load Balancer
+   ↓
+Application
+   ↓
+Database
+   ↓
+External APIs
+
+Check:
+
+DNS resolution latency
+Packet loss
+Network latency
+Load balancer latency
+External API response times
+
+Commands:
+
+ping <host>
+traceroute <host>
+curl -w "@curl-format.txt" <URL>
+
+A third-party API taking 10 seconds can make your application slow while CPU remains only 30%.
+
+8. Check Kubernetes (if running in K8s)
+
+I would check:
+
+kubectl top pods
+kubectl get pods
+kubectl describe pod <pod-name>
+
+Important things:
+
+Pod CPU throttling
+Memory limits
+Restart count
+Readiness failures
+Pending requests
+Node resource pressure
+Important interview point: CPU throttling
+
+Even if average CPU usage shows only 30%, the container might have a restrictive CPU limit.
+
+Check:
+
+resources:
+  requests:
+    cpu: 500m
+  limits:
+    cpu: 500m
+
+The application could be throttled despite the node having plenty of available CPU.
+
+9. Check downstream dependencies
+
+Using distributed tracing, I would identify where the request spends time.
+
+For example:
+
+Total Request: 10 seconds
+
+Application Processing: 100ms
+Database: 7 seconds ❌
+External API: 2.5 seconds ❌
+Network: 400ms
+
+Tools:
+
+Prometheus + Grafana
+OpenTelemetry
+Jaeger
+Datadog
+New Relic
+Dynatrace
+My troubleshooting flow
+User reports slowness
+        ↓
+Check p95/p99 latency
+        ↓
+Identify affected APIs
+        ↓
+Check error rate & throughput
+        ↓
+Check Application Metrics
+        ↓
+CPU / Memory / GC / Threads
+        ↓
+Check Database
+        ↓
+Slow queries / Locks / Connections
+        ↓
+Check Infrastructure
+        ↓
+Disk I/O / Network
+        ↓
+Check External Dependencies
+        ↓
+Use Distributed Tracing
+        ↓
+Identify Root Cause
+Strong interview answer
+
+"If CPU utilization is only 30%, I would not assume the infrastructure is healthy because application slowness is often caused by waiting rather than CPU processing. I would start by checking p95 and p99 latency, error rates, and identifying affected endpoints. Then I would investigate JVM metrics, garbage collection, thread pools, blocked threads, and connection pools. Next, I would check database slow queries, locks, and connection saturation. I would also investigate disk I/O, network latency, Kubernetes CPU throttling, and downstream dependencies. Finally, I would use distributed tracing to determine exactly where request latency is being spent. Low CPU with high latency often indicates an I/O wait, database bottleneck, thread contention, or external dependency issue."
+
+This answer demonstrates a systematic production troubleshooting mindset, which is exactly what interviewers expect from a Senior DevOps/SRE engineer.
+
+Rate – Requests per second
+Errors – Error rate
+Duration – Response latency when we consider apps is stable for diff metrics
+
+You mean how to decide whether an application is stable/healthy using Rate, Errors, and Duration (RED metrics).
+
+There is no single universal number. You define thresholds based on the application's baseline and SLO/SLA.
+
+1. Rate — Requests Per Second (Traffic)
+
+Rate itself doesn't tell you whether an app is unhealthy.
+
+Example:
+
+Situation	RPS	Interpretation
+Normal	500	Baseline
+Suddenly drops to 50	⚠️	Possible outage / traffic issue
+Increases to 2,000	⚠️	Traffic spike
+Stable at expected 500	✅	Normal
+What matters?
+
+Compare with historical baseline.
+
+Normal: 400–600 RPS
+Current: 500 RPS → Healthy
+
+Current: 50 RPS → Investigate
+Current: 5,000 RPS → Check capacity
+2. Errors — Error Rate
+
+Usually measured as:
+
+Error Rate = Failed Requests / Total Requests × 100
+
+Example thresholds:
+
+Error Rate	Status
+0–0.1%	🟢 Excellent
+0.1–1%	🟢 Usually acceptable
+1–2%	🟡 Investigate
+>2%	🟠 Warning
+>5%	🔴 Critical
+
+But this depends on your SLO.
+
+Example:
+
+SLO = 99.9% successful requests
+
+Allowed Error Rate = 0.1%
+
+If you have 1 million requests:
+
+Allowed failures = 1,000
+3. Duration — Response Latency
+
+Never look only at average response time.
+
+Use percentiles:
+
+p50 → Median user experience
+p95 → 95% of requests are faster than this
+p99 → Worst experience for most users
+
+Example:
+
+Metric	Target
+p50	< 200 ms
+p95	< 500 ms
+p99	< 1 sec
+
+Example:
+
+p50 = 100ms ✅
+p95 = 400ms ✅
+p99 = 5 seconds ❌
+
+This means a small percentage of users are experiencing severe slowness.
+
+Example: Is the application stable?
+
+Imagine your Grafana dashboard:
+
+Rate:      500 RPS (normal baseline: 400–600) ✅
+Errors:    0.05% (SLO allows <0.1%)           ✅
+p95:       350ms (target <500ms)              ✅
+p99:       700ms (target <1sec)               ✅
+
+Application Status: HEALTHY 🟢
+Unstable example
+Rate:      Dropped 500 → 100 RPS       ⚠️
+Errors:    Increased 0.1% → 8%         🔴
+p95:       Increased 400ms → 4 sec     🔴
+p99:       Increased 1 sec → 15 sec    🔴
+
+Application Status: UNHEALTHY 🔴
+Senior DevOps interview perspective
+
+I would say:
+
+"I don't use fixed values to determine application stability. First, I establish a baseline from historical production metrics and define SLOs. For traffic, I check whether the request rate behaves as expected. For errors, I compare the error percentage against the application's availability SLO. For latency, I monitor p95 and p99 against defined latency targets. If Rate, Errors, and Duration remain within their expected baselines and SLO thresholds, I consider the application stable."
+
+Remember this:
+
+RED tells you User Experience:
+
+Rate      → How much traffic?
+Errors    → Are requests failing?
+Duration  → Are requests slow?
+
+For a complete production health picture, combine RED with USE metrics:
+
+RED → Application perspective
+USE → Infrastructure perspective
+
+Utilization
+Saturation
+Errors
+
+That combination is a very strong answer in a Senior DevOps Engineer interview.
+
+For investigating slow app latency, an edge compute platform is an option.
+Ad
+Ads do not influence the answers you get from ChatGPT. Your chats stay private. 
+Learn about ads and personalization
+what is p 50 , p 95 , p99
+
+p50, p95, and p99 are latency percentiles. They tell you how fast your application responds for different percentages of users.
+
+Simple example
+
+Suppose 100 requests hit your application, and response times vary.
+
+P50 (50th percentile)
+
+50% of requests are completed faster than or equal to this time.
+
+Also called the median.
+
+P50 = 200ms
+
+→ 50 out of 100 requests completed within 200ms
+
+This represents the typical user experience.
+
+P95 (95th percentile)
+
+95% of requests complete within this time.
+
+P95 = 800ms
+
+→ 95 requests completed within 800ms
+→ Remaining 5 requests took longer than 800ms
+
+This helps identify slower user experiences.
+
+P99 (99th percentile)
+
+99% of requests complete within this time.
+
+P99 = 2 seconds
+
+→ 99 requests completed within 2 seconds
+→ Only 1 request took longer
+
+This helps detect worst-case latency / tail latency.
+
+Visual example
+
+Imagine 100 users:
+
+Fastest                                      Slowest
+|--------------------------------------------------|
+
+P50              P95                    P99
+ |                |                      |
+200ms            800ms                  2 sec
+Why not just use Average Response Time?
+
+Consider these response times:
+
+99 requests = 100ms
+1 request   = 10 seconds
+
+Average may look acceptable, but one user had a terrible experience.
+
+Percentiles expose these problems.
+
+Metric	Meaning	Why important
+P50	Typical/median request	Normal user experience
+P95	95% requests faster than this	Detects slow requests
+P99	99% requests faster than this	Detects tail latency
+Real production example
+P50 = 150ms  ✅
+P95 = 400ms  ✅
+P99 = 8 sec  ❌
+
+Interpretation:
+
+Most users have a fast experience, but the slowest 1% of requests are taking up to 8 seconds. I would investigate database queries, external APIs, thread pools, GC pauses, or network latency.
+
+Easy way to remember
+P50 → Normal users
+P95 → Slow users
+P99 → Very slow / worst affected users
+
+Interview tip: When discussing production monitoring, say "I monitor p95 and p99 rather than just average latency because averages can hide tail latency issues."

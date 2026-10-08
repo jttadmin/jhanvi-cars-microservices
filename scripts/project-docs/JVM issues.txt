@@ -1,0 +1,44 @@
+Scenario 1: The "Slow Death" (Memory Leak)
+Symptom: The application starts fast, but over several hours or days, it slows down. Garbage Collection (GC) runs more frequently and takes longer, eventually leading to a java.lang.OutOfMemoryError: Java heap space.
+
+Where to make changes: * Code: Look for static Maps or Lists that act as caches but never remove old entries. Check if listeners or callbacks are being registered but never unregistered.
+
+Config: Implement a TTL (Time-To-Live) on your caches using libraries like Caffeine or Guava.
+
+Tools to use:
+
+Eclipse MAT: Take a heap dump (jmap -dump:format=b,file=heap.bin <pid>) and feed it into MAT. Look at the "Leak Suspects" report to see which objects are consuming the most space.
+
+VisualVM: Watch the "Heap" graph; if the "valleys" (the memory level after a GC) keep rising over time, you have a leak.
+
+Scenario 2: Metaspace Exhaustion (Non-Heap)
+Symptom: The application crashes with java.lang.OutOfMemoryError: Metaspace. This often happens in environments that do a lot of dynamic class loading (e.g., heavy use of Reflection, Spring, or Hibernate).
+
+Where to make changes:
+
+JVM Arguments: Increase the limit using -XX:MaxMetaspaceSize=512m.
+
+Code: Reduce the creation of dynamic proxies or check if a library is creating new classloaders repeatedly without closing them.
+
+Tools to use:
+
+jstat: Run jstat -gc <pid> to see the MU (Metaspace Utilization) and MC (Metaspace Capacity) columns.
+
+jcmd: Use jcmd <pid> VM.metaspace to get a highly detailed breakdown of what classes are filling up the non-heap area.
+
+Scenario 3: "Stop-the-World" Latency Spikes
+Symptom: The application "freezes" for several seconds. Users report timeouts, even though the CPU usage isn't at 100%. This is usually caused by the GC trying to clean up a massive heap.
+
+Where to make changes:
+
+JVM Arguments: Switch to a low-latency garbage collector like G1GC or ZGC.
+
+-XX:+UseG1GC -XX:MaxGCPauseMillis=200
+
+Code: Reduce "Object Churn" (creating millions of temporary objects in a loop). Reuse objects or use StringBuilder instead of constant String concatenation.
+
+Tools to use:
+
+Java Mission Control (JMC): Enable Java Flight Recorder (JFR) to see exactly how long GCs are taking and what triggered them.
+
+GCViewer: Export your GC logs (-Xlog:gc*) and visualize them to see the pause intervals.
