@@ -1,0 +1,165 @@
+pipeline {
+    agent none
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timeout(time: 45, unit: 'MINUTES')
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        retry(1) // retry the whole pipeline once on infra flakiness
+    }
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['dev', 'staging', 'prod'], description: 'Target environment')
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip test stage')
+        string(name: 'IMAGE_TAG', defaultValue: '', description: 'Override image tag (defaults to git sha)')
+    }
+
+    environment {
+        REGISTRY        = 'docker.io/jhanviadmin'
+        IMAGE_NAME      = 'jhanvi-cars-backend'
+        DOCKERHUB_CREDS = credentials('dockerhub-creds')       // exposes _USR / _PSW
+        KUBECONFIG_CRED = credentials('minikube-kubeconfig')
+        GIT_SHA_SHORT   = "${sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            agent { label 'linux' }
+            steps {
+                checkout scm
+                stash name: 'source', includes: '**', excludes: 'node_modules/**'
+            }
+        }
+
+        stage('Build & Test') {
+            agent { label 'linux' }
+            when {
+                // don't waste CI on doc-only changes
+                not { changelog '.*\\[skip ci\\].*' }
+            }
+            environment {
+                NODE_ENV = 'test'
+            }
+            stages {
+                stage('Install deps') {
+                    steps {
+                        unstash 'source'
+                        sh 'npm ci'
+                    }
+                }
+                stage('Parallel checks') {
+                    parallel {
+                        stage('Lint') {
+                            steps { sh 'npm run lint' }
+                        }
+                        stage('Unit tests') {
+                            when { expression { !params.SKIP_TESTS } }
+                            steps {
+                                sh 'npm test -- --ci --reporters=default --reporters=jest-junit'
+                            }
+                            post {
+                                always {
+                                    junit 'reports/junit/*.xml'
+                                }
+                            }
+                        }
+                        stage('Dependency audit') {
+                            steps {
+                                // don't fail the build on audit, just report
+                                sh 'npm audit --json > audit.json || true'
+                                archiveArtifacts artifacts: 'audit.json', allowEmptyArchive: true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Image') {
+            agent { label 'linux && docker' }
+            steps {
+                unstash 'source'
+                script {
+                    def tag = params.IMAGE_TAG?.trim() ? params.IMAGE_TAG : env.GIT_SHA_SHORT
+                    env.RESOLVED_TAG = tag
+
+                    retry(2) {
+                        sh """
+                            echo \$DOCKERHUB_CREDS_PSW | docker login -u \$DOCKERHUB_CREDS_USR --password-stdin
+                            docker build -t ${REGISTRY}/${IMAGE_NAME}:${tag} .
+                            docker push ${REGISTRY}/${IMAGE_NAME}:${tag}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Approval') {
+            agent none
+            when { expression { params.DEPLOY_ENV == 'prod' } }
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: "Deploy ${env.RESOLVED_TAG} to PROD?", ok: 'Deploy',
+                          submitter: 'release-approvers'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            agent { label 'linux' }
+            steps {
+                withCredentials([file(credentialsId: 'minikube-kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh """
+                        kubectl set image deployment/jhanvi-cars-backend \
+                          jhanvi-cars-backend=${REGISTRY}/${IMAGE_NAME}:${env.RESOLVED_TAG} \
+                          -n jhanvi-cars
+
+                        kubectl rollout status deployment/jhanvi-cars-backend \
+                          -n jhanvi-cars --timeout=120s
+                    """
+                }
+            }
+        }
+
+        stage('Smoke test') {
+            agent { label 'linux' }
+            steps {
+                script {
+                    def healthy = false
+                    for (int i = 0; i < 5 && !healthy; i++) {
+                        def status = sh(
+                            script: "curl -s -o /dev/null -w '%{http_code}' http://192.168.56.4:30080/health",
+                            returnStdout: true
+                        ).trim()
+                        healthy = (status == '200')
+                        if (!healthy) sleep(time: 10, unit: 'SECONDS')
+                    }
+                    if (!healthy) error("Health check failed after deploy")
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployed ${env.RESOLVED_TAG} to ${params.DEPLOY_ENV}"
+        }
+        failure {
+            script {
+                if (params.DEPLOY_ENV == 'prod') {
+                    node('linux') {
+                        withCredentials([file(credentialsId: 'minikube-kubeconfig', variable: 'KUBECONFIG')]) {
+                            sh "kubectl rollout undo deployment/jhanvi-cars-backend -n jhanvi-cars"
+                        }
+                    }
+                }
+            }
+        }
+        always {
+            node('linux') { cleanWs() }
+        }
+    }
+}
