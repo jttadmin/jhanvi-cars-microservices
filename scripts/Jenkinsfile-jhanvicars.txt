@@ -1,0 +1,1005 @@
+/*
+ * Jhanvi Cars - Production Jenkins Pipeline
+ *
+ * Flow:
+ *
+ * GitHub
+ *   -> Checkout
+ *   -> Install dependencies
+ *   -> Lint
+ *   -> Unit tests
+ *   -> SonarQube
+ *   -> Trivy filesystem scan
+ *   -> Docker build
+ *   -> Trivy image scan
+ *   -> Docker Hub push
+ *   -> PROD approval
+ *   -> AWS Secrets Manager
+ *   -> EKS deployment
+ *   -> Rollout verification
+ *   -> Smoke test
+ *   -> Automatic rollback on failure
+ *
+ * Jenkins agent requirements:
+ *   - Linux
+ *   - Git
+ *   - Node.js
+ *   - npm
+ *   - Docker
+ *   - AWS CLI v2
+ *   - kubectl
+ *   - jq
+ *   - envsubst
+ *   - Trivy
+ *
+ * Jenkins credentials:
+ *
+ * dockerhub-creds
+ *   Username/password credential
+ *
+ * aws-jenkins-role
+ *   Prefer IAM role / instance profile over static AWS keys.
+ *
+ * sonar-token
+ *   SonarQube token
+ */
+
+pipeline {
+
+    agent none
+
+    options {
+
+        buildDiscarder(
+            logRotator(
+                numToKeepStr: '30',
+                artifactNumToKeepStr: '10'
+            )
+        )
+
+        timeout(
+            time: 60,
+            unit: 'MINUTES'
+        )
+
+        timestamps()
+
+        ansiColor('xterm')
+
+        disableConcurrentBuilds()
+
+        skipDefaultCheckout(true)
+    }
+
+    parameters {
+
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: [
+                'staging',
+                'prod'
+            ],
+            description: 'Deployment environment'
+        )
+
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: '',
+            description: 'Optional Docker image tag. Defaults to Git commit SHA.'
+        )
+
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: 'Emergency option. Should normally remain false.'
+        )
+    }
+
+    environment {
+
+        /*
+         * AWS
+         */
+        AWS_REGION = 'ap-south-2'
+
+        /*
+         * Docker Hub
+         */
+        DOCKER_REGISTRY = 'docker.io/jhanviadmin'
+
+        IMAGE_NAME = 'jhanvi-cars-backend'
+
+        /*
+         * Kubernetes
+         */
+        EKS_CLUSTER = "jhanvi-cars-${params.DEPLOY_ENV}"
+
+        K8S_NAMESPACE = 'jhanvi-cars'
+
+        K8S_DEPLOYMENT = 'jhanvi-cars-backend'
+
+        K8S_SERVICE = 'jhanvi-cars-backend'
+
+        /*
+         * AWS Secrets Manager
+         */
+        SECRET_ID = "jhanvi-cars/${params.DEPLOY_ENV}/backend"
+
+        /*
+         * Jenkins credentials
+         */
+        DOCKERHUB_CREDS = credentials('dockerhub-creds')
+
+        /*
+         * SonarQube
+         */
+        SONAR_PROJECT_KEY = 'jhanvi-cars-backend'
+    }
+
+
+    stages {
+
+        // ============================================================
+        // 1. CHECKOUT
+        // ============================================================
+
+        stage('Checkout') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                script {
+
+                    try {
+
+                        checkout scm
+
+                        env.GIT_SHA = sh(
+                            script: 'git rev-parse HEAD',
+                            returnStdout: true
+                        ).trim()
+
+                        env.GIT_SHA_SHORT = sh(
+                            script: 'git rev-parse --short HEAD',
+                            returnStdout: true
+                        ).trim()
+
+                        env.RESOLVED_TAG =
+                            params.IMAGE_TAG?.trim()
+                            ? params.IMAGE_TAG.trim()
+                            : env.GIT_SHA_SHORT
+
+                        echo """
+==================================================
+JHANVI CARS BUILD
+==================================================
+Git SHA       : ${env.GIT_SHA}
+Image Tag     : ${env.RESOLVED_TAG}
+Environment   : ${params.DEPLOY_ENV}
+AWS Region    : ${env.AWS_REGION}
+==================================================
+"""
+
+                    } catch (err) {
+
+                        error(
+                            "Git checkout failed: ${err.getMessage()}"
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 2. INSTALL DEPENDENCIES
+        // ============================================================
+
+        stage('Install Dependencies') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                script {
+
+                    try {
+
+                        sh '''
+                            set -e
+
+                            node --version
+                            npm --version
+
+                            npm ci
+                        '''
+
+                    } catch (err) {
+
+                        error(
+                            "npm dependency installation failed: ${err.getMessage()}"
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 3. LINT
+        // ============================================================
+
+        stage('Lint') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                catchError(
+                    buildResult: 'UNSTABLE',
+                    stageResult: 'UNSTABLE'
+                ) {
+
+                    sh '''
+                        set -e
+
+                        if npm run | grep -q "lint"; then
+                            npm run lint
+                        else
+                            echo "No lint script configured."
+                        fi
+                    '''
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 4. UNIT TESTS
+        // ============================================================
+
+        stage('Unit Tests') {
+
+            agent {
+                label 'linux'
+            }
+
+            when {
+
+                expression {
+                    return !params.SKIP_TESTS
+                }
+            }
+
+            steps {
+
+                script {
+
+                    try {
+
+                        sh '''
+                            set -e
+
+                            npm test -- \
+                              --ci \
+                              --reporters=default \
+                              --reporters=jest-junit
+                        '''
+
+                    } catch (err) {
+
+                        error(
+                            "Unit tests failed: ${err.getMessage()}"
+                        )
+
+                    } finally {
+
+                        junit(
+                            allowEmptyResults: true,
+                            testResults: 'reports/junit/*.xml'
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 5. SONARQUBE
+        // ============================================================
+
+        stage('SonarQube Analysis') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                script {
+
+                    withSonarQubeEnv('SonarQube') {
+
+                        sh '''
+                            set -e
+
+                            if command -v sonar-scanner >/dev/null 2>&1; then
+
+                                sonar-scanner \
+                                  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                  -Dsonar.projectName=${SONAR_PROJECT_KEY} \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.exclusions=node_modules/**,coverage/**
+
+                            else
+
+                                echo "sonar-scanner not installed on this agent."
+                                exit 1
+
+                            fi
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 6. QUALITY GATE
+        // ============================================================
+
+        stage('SonarQube Quality Gate') {
+
+            agent none
+
+            steps {
+
+                timeout(
+                    time: 10,
+                    unit: 'MINUTES'
+                ) {
+
+                    waitForQualityGate(
+                        abortPipeline: true
+                    )
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 7. TRIVY FILESYSTEM SCAN
+        // ============================================================
+
+        stage('Security Scan - Filesystem') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                sh '''
+                    set -e
+
+                    trivy fs \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      --ignore-unfixed \
+                      .
+                '''
+            }
+        }
+
+
+        // ============================================================
+        // 8. BUILD DOCKER IMAGE
+        // ============================================================
+
+        stage('Docker Build') {
+
+            agent {
+                label 'linux && docker'
+            }
+
+            steps {
+
+                script {
+
+                    env.FULL_IMAGE =
+                        "${DOCKER_REGISTRY}/${IMAGE_NAME}:${RESOLVED_TAG}"
+
+                    sh """
+                        set -e
+
+                        echo "Building:"
+                        echo "${FULL_IMAGE}"
+
+                        docker build \
+                          --pull \
+                          --no-cache \
+                          -t ${FULL_IMAGE} \
+                          .
+                    """
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 9. TRIVY DOCKER IMAGE SCAN
+        // ============================================================
+
+        stage('Security Scan - Docker Image') {
+
+            agent {
+                label 'linux && docker'
+            }
+
+            steps {
+
+                sh """
+                    set -e
+
+                    trivy image \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      --ignore-unfixed \
+                      ${FULL_IMAGE}
+                """
+            }
+        }
+
+
+        // ============================================================
+        // 10. DOCKER PUSH
+        // ============================================================
+
+        stage('Push Docker Image') {
+
+            agent {
+                label 'linux && docker'
+            }
+
+            steps {
+
+                script {
+
+                    try {
+
+                        retry(2) {
+
+                            sh '''
+                                set -e
+
+                                echo "$DOCKERHUB_CREDS_PSW" |
+                                  docker login \
+                                  --username "$DOCKERHUB_CREDS_USR" \
+                                  --password-stdin
+                            '''
+                        }
+
+
+                        retry(2) {
+
+                            sh """
+                                set -e
+
+                                docker push ${FULL_IMAGE}
+                            """
+                        }
+
+
+                        /*
+                         * Optional immutable release tag.
+                         */
+                        sh """
+
+                            docker tag \
+                              ${FULL_IMAGE} \
+                              ${DOCKER_REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}
+
+                            docker push \
+                              ${DOCKER_REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}
+                        """
+
+
+                    } catch (err) {
+
+                        error(
+                            "Docker build/push failed: ${err.getMessage()}"
+                        )
+
+                    } finally {
+
+                        sh '''
+                            docker logout || true
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 11. PRODUCTION APPROVAL
+        // ============================================================
+
+        stage('Production Approval') {
+
+            agent none
+
+            when {
+
+                expression {
+                    return params.DEPLOY_ENV == 'prod'
+                }
+            }
+
+            steps {
+
+                timeout(
+                    time: 15,
+                    unit: 'MINUTES'
+                ) {
+
+                    input(
+                        message:
+                            "Deploy Jhanvi Cars ${FULL_IMAGE} to PRODUCTION?",
+                        ok: 'Deploy',
+                        submitter: 'release-approvers'
+                    )
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 12. AWS SECRETS + KUBERNETES DEPLOY
+        // ============================================================
+
+        stage('Deploy to EKS') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                script {
+
+                    def secretJson
+                    def secrets
+
+                    try {
+
+                        // ------------------------------------------------
+                        // Fetch secret
+                        // ------------------------------------------------
+
+                        secretJson = sh(
+                            script: """
+                                aws secretsmanager get-secret-value \
+                                  --region ${AWS_REGION} \
+                                  --secret-id '${SECRET_ID}' \
+                                  --query SecretString \
+                                  --output text
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+
+                        // ------------------------------------------------
+                        // Parse secret
+                        // ------------------------------------------------
+
+                        secrets = readJSON(
+                            text: secretJson
+                        )
+
+
+                        // ------------------------------------------------
+                        // Configure EKS
+                        // ------------------------------------------------
+
+                        sh """
+                            set -e
+
+                            aws eks update-kubeconfig \
+                              --region ${AWS_REGION} \
+                              --name ${EKS_CLUSTER}
+
+                            kubectl cluster-info
+
+                            kubectl get nodes
+                        """
+
+
+                        // ------------------------------------------------
+                        // Ensure namespace exists
+                        // ------------------------------------------------
+
+                        sh """
+
+                            kubectl create namespace ${K8S_NAMESPACE} \
+                              --dry-run=client \
+                              -o yaml |
+                              kubectl apply -f -
+                        """
+
+
+                        // ------------------------------------------------
+                        // Create/update Kubernetes secret
+                        // ------------------------------------------------
+
+                        withEnv(
+                            secrets.collect {
+                                key, value ->
+                                "${key}=${value}"
+                            }
+                        ) {
+
+                            sh """
+
+                                kubectl create secret generic \
+                                  jhanvi-cars-backend-secrets \
+                                  --namespace ${K8S_NAMESPACE} \
+                                  --from-literal=DB_HOST="\$DB_HOST" \
+                                  --from-literal=DB_USER="\$DB_USER" \
+                                  --from-literal=DB_PASSWORD="\$DB_PASSWORD" \
+                                  --from-literal=JWT_SECRET="\$JWT_SECRET" \
+                                  --from-literal=GOOGLE_MAPS_API_KEY="\$GOOGLE_MAPS_API_KEY" \
+                                  --dry-run=client \
+                                  -o yaml |
+                                  kubectl apply -f -
+                            """
+                        }
+
+
+                        // ------------------------------------------------
+                        // Check existing deployment
+                        // ------------------------------------------------
+
+                        env.DEPLOYMENT_EXISTS = sh(
+                            script: """
+                                kubectl get deployment \
+                                  ${K8S_DEPLOYMENT} \
+                                  --namespace ${K8S_NAMESPACE} \
+                                  >/dev/null 2>&1 \
+                                  && echo true \
+                                  || echo false
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+
+                        // ------------------------------------------------
+                        // Deploy
+                        // ------------------------------------------------
+
+                        sh """
+
+                            export IMAGE=${FULL_IMAGE}
+
+                            envsubst < \
+                              k8s/deployment.yaml |
+                              kubectl apply -f -
+                        """
+
+
+                        // ------------------------------------------------
+                        // Wait for rollout
+                        // ------------------------------------------------
+
+                        sh """
+
+                            kubectl rollout status \
+                              deployment/${K8S_DEPLOYMENT} \
+                              --namespace ${K8S_NAMESPACE} \
+                              --timeout=180s
+                        """
+
+
+                    } catch (err) {
+
+                        echo """
+==================================================
+DEPLOYMENT FAILED
+==================================================
+Reason:
+${err.getMessage()}
+==================================================
+"""
+
+                        // ------------------------------------------------
+                        // Automatic rollback
+                        // ------------------------------------------------
+
+                        catchError(
+                            buildResult: 'FAILURE',
+                            stageResult: 'FAILURE'
+                        ) {
+
+                            if (
+                                env.DEPLOYMENT_EXISTS == 'true'
+                            ) {
+
+                                echo "Rolling back previous deployment..."
+
+                                sh """
+
+                                    kubectl rollout undo \
+                                      deployment/${K8S_DEPLOYMENT} \
+                                      --namespace ${K8S_NAMESPACE}
+                                """
+
+                                sh """
+
+                                    kubectl rollout status \
+                                      deployment/${K8S_DEPLOYMENT} \
+                                      --namespace ${K8S_NAMESPACE} \
+                                      --timeout=180s
+                                """
+
+                            } else {
+
+                                echo """
+First deployment failed.
+No previous revision exists.
+Cleaning failed deployment.
+"""
+
+                                sh """
+
+                                    kubectl delete deployment \
+                                      ${K8S_DEPLOYMENT} \
+                                      --namespace ${K8S_NAMESPACE} \
+                                      --ignore-not-found
+                                """
+                            }
+                        }
+
+                        error(
+                            "EKS deployment failed: ${err.getMessage()}"
+                        )
+                    }
+                }
+            }
+        }
+
+
+        // ============================================================
+        // 13. KUBERNETES VERIFICATION
+        // ============================================================
+
+        stage('Kubernetes Verification') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                sh """
+
+                    kubectl get deployment \
+                      ${K8S_DEPLOYMENT} \
+                      --namespace ${K8S_NAMESPACE}
+
+                    kubectl get pods \
+                      --namespace ${K8S_NAMESPACE} \
+                      -o wide
+
+                    kubectl get service \
+                      ${K8S_SERVICE} \
+                      --namespace ${K8S_NAMESPACE}
+                """
+            }
+        }
+
+
+        // ============================================================
+        // 14. SMOKE TEST
+        // ============================================================
+
+        stage('Smoke Test') {
+
+            agent {
+                label 'linux'
+            }
+
+            steps {
+
+                script {
+
+                    def healthy = false
+                    def status = 'unknown'
+
+
+                    for (
+                        int attempt = 1;
+                        attempt <= 6 && !healthy;
+                        attempt++
+                    ) {
+
+                        try {
+
+                            status = sh(
+                                script: """
+
+                                    kubectl run \
+                                      jhanvi-health-${BUILD_NUMBER}-${attempt} \
+                                      --rm \
+                                      -i \
+                                      --restart=Never \
+                                      --namespace ${K8S_NAMESPACE} \
+                                      --image=curlimages/curl \
+                                      -- \
+                                      -s \
+                                      -o /dev/null \
+                                      -w '%{http_code}' \
+                                      http://${K8S_SERVICE}/health
+
+                                """,
+                                returnStdout: true
+                            ).trim()
+
+
+                            echo """
+Smoke test attempt ${attempt}
+HTTP status: ${status}
+"""
+
+
+                            if (
+                                status == '200'
+                            ) {
+
+                                healthy = true
+                            }
+
+
+                        } catch (err) {
+
+                            status =
+                                "probe error: ${err.getMessage()}"
+                        }
+
+
+                        if (!healthy) {
+
+                            sleep(
+                                time: 10,
+                                unit: 'SECONDS'
+                            )
+                        }
+                    }
+
+
+                    if (!healthy) {
+
+                        echo "Smoke test failed."
+
+                        catchError(
+                            buildResult: 'FAILURE',
+                            stageResult: 'FAILURE'
+                        ) {
+
+                            if (
+                                env.DEPLOYMENT_EXISTS == 'true'
+                            ) {
+
+                                sh """
+
+                                    kubectl rollout undo \
+                                      deployment/${K8S_DEPLOYMENT} \
+                                      --namespace ${K8S_NAMESPACE}
+                                """
+
+                                sh """
+
+                                    kubectl rollout status \
+                                      deployment/${K8S_DEPLOYMENT} \
+                                      --namespace ${K8S_NAMESPACE} \
+                                      --timeout=180s
+                                """
+                            }
+                        }
+
+
+                        error(
+                            "Jhanvi Cars health check failed. Last status: ${status}"
+                        )
+                    }
+
+
+                    echo """
+==================================================
+JHANVI CARS DEPLOYMENT SUCCESSFUL
+==================================================
+Image       : ${FULL_IMAGE}
+Environment : ${DEPLOY_ENV}
+Cluster     : ${EKS_CLUSTER}
+Namespace   : ${K8S_NAMESPACE}
+==================================================
+"""
+                }
+            }
+        }
+    }
+
+
+    // ================================================================
+    // POST ACTIONS
+    // ================================================================
+
+    post {
+
+        success {
+
+            echo """
+==================================================
+JHANVI CARS PIPELINE SUCCESS
+==================================================
+Build     : ${BUILD_NUMBER}
+Image     : ${FULL_IMAGE}
+Git SHA   : ${GIT_SHA_SHORT}
+Environment: ${DEPLOY_ENV}
+==================================================
+"""
+        }
+
+
+        unstable {
+
+            echo """
+Jhanvi Cars pipeline completed with warnings.
+Check lint/Sonar/test reports.
+"""
+        }
+
+
+        failure {
+
+            echo """
+==================================================
+JHANVI CARS PIPELINE FAILED
+==================================================
+Build URL:
+${BUILD_URL}
+
+Environment:
+${DEPLOY_ENV}
+
+Check Jenkins stage logs.
+==================================================
+"""
+        }
+
+
+        always {
+
+            script {
+
+                sh(
+                    script: '''
+                        docker logout || true
+                    ''',
+                    returnStatus: true
+                )
+
+                cleanWs(
+                    deleteDirs: true,
+                    disableDeferredWipeout: true
+                )
+            }
+        }
+    }
+}
