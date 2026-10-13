@@ -18,7 +18,10 @@ export function errorHandler(
     return res
       .status(err.statusCode)
       .json({
-        message: err.message
+        message: err.message,
+        ...(typeof err.code === "string"
+          ? { code: err.code }
+          : {}),
       });
   }
 

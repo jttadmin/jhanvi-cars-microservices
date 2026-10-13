@@ -90,6 +90,18 @@ export function createDriverRoutes(
   );
 
   router.patch(
+    "/ride-requests/cancel",
+    requireInternalService,
+    asyncHandler(rideRequestController.cancel)
+  );
+
+  router.patch(
+    "/ride-requests/complete",
+    requireInternalService,
+    asyncHandler(rideRequestController.complete)
+  );
+
+  router.patch(
     "/ride-requests/:id/expire",
     requireInternalService,
     asyncHandler(rideRequestController.expire)

@@ -1,6 +1,9 @@
 import request from 'supertest';
 
 jest.mock('../src/repositories/user.repository');
+jest.mock('../src/services/user-profile.client', () => ({
+  initializeUserProfile: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../src/services/token.service', () => ({
   tokenProvider: { issue: jest.fn().mockResolvedValue('fake.jwt.token') },
 }));

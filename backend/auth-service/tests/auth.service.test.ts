@@ -1,6 +1,9 @@
 import bcrypt from 'bcrypt';
 
 jest.mock('../src/repositories/user.repository');
+jest.mock('../src/services/user-profile.client', () => ({
+  initializeUserProfile: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../src/services/token.service', () => ({
   tokenProvider: { issue: jest.fn().mockResolvedValue('fake.jwt.token') },
 }));
@@ -82,7 +85,7 @@ describe('authService.login', () => {
     });
 
     await expect(
-      authService.login({ email: 'jane@example.com', password: 'wrong-password' }),
+      authService.login({ identifier: 'jane@example.com', password: 'wrong-password' }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
   });
 });

@@ -1,6 +1,6 @@
 import { Knex } from "knex";
 import { Driver, NearbyDriver } from "../types/driver";
-
+import { DriverError } from "../errors/DriverError";
 export class DriverRepository {
   private db: Knex;
 
@@ -86,52 +86,100 @@ export class DriverRepository {
     id: string,
     driver: Driver
   ): Promise<Driver | undefined> {
-    const [row] = await this.db("drivers")
-      .where({ id })
-      .update({
-        user_id: driver.userId ?? null,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-        license_number: driver.licenseNumber,
-        vehicle_number: driver.vehicleNumber,
-        vehicle_type: driver.vehicleType,
-        vehicle_model: driver.vehicleModel,
-        is_available: driver.isAvailable,
-        updated_at: this.db.fn.now(),
-      })
-      .returning("*");
+    return this.db.transaction(async (trx) => {
+      const existing = await trx("drivers")
+        .where({ id })
+        .forUpdate()
+        .first();
 
-    if (!row) {
-      return undefined;
-    }
+      if (!existing) {
+        return undefined;
+      }
 
-    return this.mapDriver(row);
+      if (driver.isAvailable) {
+        const acceptedRequest = await trx("driver_ride_requests")
+          .where({
+            driver_id: id,
+            status: "ACCEPTED",
+          })
+          .first();
+
+        if (!existing.is_online || acceptedRequest) {
+          throw new DriverError(
+            409,
+            "Driver availability cannot be enabled while offline or while an accepted ride exists",
+            "DRIVER_AVAILABILITY_CONFLICT"
+          );
+        }
+      }
+
+      const [row] = await trx("drivers")
+        .where({ id })
+        .update({
+          user_id: driver.userId ?? null,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+          license_number: driver.licenseNumber,
+          vehicle_number: driver.vehicleNumber,
+          vehicle_type: driver.vehicleType,
+          vehicle_model: driver.vehicleModel,
+          is_available: driver.isAvailable,
+          updated_at: trx.fn.now(),
+        })
+        .returning("*");
+
+      return row ? this.mapDriver(row) : undefined;
+    });
   }
 
   async updateOnline(
     id: string,
     isOnline: boolean
   ): Promise<Driver | undefined> {
-    const updateData: Record<string, unknown> = {
-      is_online: isOnline,
-      updated_at: this.db.fn.now(),
-    };
+    return this.db.transaction(async (trx) => {
+      const existing = await trx("drivers")
+        .where({ id })
+        .forUpdate()
+        .first();
 
-    if (!isOnline) {
-      updateData.is_available = false;
-    }
+      if (!existing) {
+        return undefined;
+      }
 
-    const [row] = await this.db("drivers")
-      .where({ id })
-      .update(updateData)
-      .returning("*");
+      if (isOnline) {
+        const acceptedRequest = await trx("driver_ride_requests")
+          .where({
+            driver_id: id,
+            status: "ACCEPTED",
+          })
+          .first();
 
-    if (!row) {
-      return undefined;
-    }
+        if (acceptedRequest) {
+          throw new DriverError(
+            409,
+            "Driver cannot be switched online while an accepted ride exists",
+            "DRIVER_AVAILABILITY_CONFLICT"
+          );
+        }
+      }
 
-    return this.mapDriver(row);
+      const updateData: Record<string, unknown> = {
+        is_online: isOnline,
+        updated_at: trx.fn.now(),
+      };
+
+      if (!isOnline) {
+        updateData.is_available = false;
+      }
+
+      const [row] = await trx("drivers")
+        .where({ id })
+        .update(updateData)
+        .returning("*");
+
+      return row ? this.mapDriver(row) : undefined;
+    });
   }
 
   async updateLocation(
@@ -210,5 +258,4 @@ export class DriverRepository {
       vehicleModel: row.vehicle_model,
     }));
   }
-
 }

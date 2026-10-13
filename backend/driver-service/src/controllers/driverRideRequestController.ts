@@ -1,3 +1,4 @@
+
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { DriverRideRequestService } from "../services/driverRideRequestService";
@@ -9,7 +10,10 @@ export class DriverRideRequestController {
     private readonly driverService: DriverService
   ) {}
 
-  create = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  create = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const request =
         await this.rideRequestService.createRideRequest(req.body);
@@ -23,7 +27,7 @@ export class DriverRideRequestController {
             : "Failed to create ride request",
       });
     }
-  }
+  };
 
   getDriverIdsByBookingId = async (
     req: AuthenticatedRequest,
@@ -54,7 +58,10 @@ export class DriverRideRequestController {
     }
   };
 
-  getMine = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getMine = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
@@ -82,9 +89,12 @@ export class DriverRideRequestController {
             : "Failed to get ride requests",
       });
     }
-  }
+  };
 
-  accept = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  accept = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
@@ -110,14 +120,87 @@ export class DriverRideRequestController {
 
       res.json(request);
     } catch (error) {
-      res.status(409).json({
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to accept ride request",
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Ride request is unavailable")
+      ) {
+        res.status(409).json({ message: error.message });
+        return;
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      res.status(500).json({
+        message: "Failed to accept ride request",
       });
     }
-  }
+  };
+
+
+
+  cancel = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    const bookingId =
+      typeof req.body?.bookingId === "string"
+        ? req.body.bookingId.trim()
+        : "";
+    const driverId =
+      typeof req.body?.driverId === "string"
+        ? req.body.driverId.trim()
+        : "";
+
+    if (!bookingId || !driverId) {
+      res.status(400).json({
+        message: "bookingId and driverId are required",
+        code: "INVALID_RIDE_CANCELLATION",
+      });
+      return;
+    }
+
+    const request =
+      await this.rideRequestService.cancelRideRequest(
+        bookingId,
+        driverId
+      );
+
+    res.json(request);
+  };
+
+  complete = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    const bookingId =
+      typeof req.body?.bookingId === "string"
+        ? req.body.bookingId.trim()
+        : "";
+
+    const driverId =
+      typeof req.body?.driverId === "string"
+        ? req.body.driverId.trim()
+        : "";
+
+    if (!bookingId || !driverId) {
+      res.status(400).json({
+        message: "bookingId and driverId are required",
+        code: "INVALID_RIDE_COMPLETION",
+      });
+      return;
+    }
+
+    const request =
+      await this.rideRequestService.completeRideRequest(
+        bookingId,
+        driverId
+      );
+
+    res.json(request);
+  };
+
 
   expire = async (
     req: AuthenticatedRequest,
@@ -145,9 +228,12 @@ export class DriverRideRequestController {
             : "Failed to expire ride request",
       });
     }
-  }
+  };
 
-  reject = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  reject = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({ message: "Unauthorized" });
@@ -180,5 +266,5 @@ export class DriverRideRequestController {
             : "Failed to reject ride request",
       });
     }
-  }
+  };
 }

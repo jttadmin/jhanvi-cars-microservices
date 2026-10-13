@@ -26,6 +26,8 @@ interface Vehicle {
   status: string;
 }
 
+const DISPATCH_HTTP_TIMEOUT_MS = 10_000;
+
 type DriverVehicleAction =
   | "START_TRIP"
   | "END_TRIP"
@@ -39,7 +41,8 @@ async function getJson(
 
   try {
     response = await fetch(url, {
-       headers: internalHeaders
+      headers: internalHeaders,
+      signal: AbortSignal.timeout(DISPATCH_HTTP_TIMEOUT_MS)
     });
   } catch {
     throw new BookingError(
@@ -110,6 +113,43 @@ async function patchJson(
   }
 }
 
+async function patchRequiredJson(
+  url: string,
+  body: unknown,
+  serviceName: string
+): Promise<any> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      method: "PATCH",
+      headers: internalHeaders,
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw new BookingError(
+      503,
+      `${serviceName} is unavailable`
+    );
+  }
+
+  if (!response.ok) {
+    throw new BookingError(
+      response.status === 404 ? 502 : 503,
+      `${serviceName} returned HTTP ${response.status}`
+    );
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    throw new BookingError(
+      503,
+      `${serviceName} returned an invalid response`
+    );
+  }
+}
+
 async function getDriverAndVehicle(
   driverId: string
 ): Promise<{
@@ -150,31 +190,16 @@ async function getDriverAndVehicle(
     );
   }
 
-  const vehicle =
-    vehicles.find(
-      (item) =>
-        item.driverId === driver.id
-    ) ??
-    vehicles.find(
-      (item) =>
-        item.registrationNumber ===
-        driver.vehicleNumber
-    );
+  // Require an explicit assignment in Vehicle Service.
+  // A matching registration number alone is not sufficient.
+  const vehicle = vehicles.find(
+    (item) => item.driverId === driver.id
+  );
 
   if (!vehicle) {
     throw new BookingError(
-      404,
-      "Vehicle assigned to driver was not found"
-    );
-  }
-
-  if (
-    vehicle.driverId &&
-    vehicle.driverId !== driver.id
-  ) {
-    throw new BookingError(
       409,
-      "Driver and vehicle assignment does not match"
+      "No vehicle is explicitly assigned to this driver"
     );
   }
 
@@ -220,6 +245,7 @@ export async function validateDriverAndVehicleForAssignment(
 }
 
 export async function syncDriverVehicleForBooking(
+  bookingId: string,
   driverId: string,
   action: DriverVehicleAction
 ): Promise<void> {
@@ -273,6 +299,17 @@ export async function syncDriverVehicleForBooking(
   }
 
   if (action === "END_TRIP" || action === "CANCEL_TRIP") {
+    const lifecyclePath =
+      action === "END_TRIP"
+        ? "complete"
+        : "cancel";
+
+    await patchRequiredJson(
+      `${driverBaseUrl}/drivers/ride-requests/${lifecyclePath}`,
+      { bookingId, driverId: driver.id },
+      "Driver Service"
+    );
+
     await patchJson(
       `${vehicleBaseUrl}/vehicles/${encodeURIComponent(vehicle.id)}/status`,
       { status: "AVAILABLE" },
@@ -354,12 +391,16 @@ export async function findNearbyDrivers(
     process.env.DRIVER_SERVICE_URL ??
     "http://localhost:3003";
 
+  // Fetch a larger candidate pool so unavailable or unassigned
+  // vehicles do not prevent us from finding another eligible driver.
+  const candidateLimit = 50;
+
   const url =
     `${driverBaseUrl}/drivers/nearby` +
     `?latitude=${encodeURIComponent(latitude)}` +
     `&longitude=${encodeURIComponent(longitude)}` +
     `&radiusKm=${encodeURIComponent(radiusKm)}` +
-    `&limit=${encodeURIComponent(limit)}`;
+    `&limit=${encodeURIComponent(candidateLimit)}`;
 
   const result =
     await getJson(
@@ -376,7 +417,37 @@ export async function findNearbyDrivers(
     );
   }
 
-  return result.drivers;
+  const vehicleBaseUrl =
+    process.env.VEHICLE_SERVICE_URL ??
+    "http://localhost:3005";
+
+  const vehicles =
+    await getJson(
+      `${vehicleBaseUrl}/vehicles/`,
+      "Vehicle Service"
+    ) as Vehicle[] | null;
+
+  if (!Array.isArray(vehicles)) {
+    throw new BookingError(
+      503,
+      "Vehicle Service returned an invalid vehicle list"
+    );
+  }
+
+  const eligibleDriverIds = new Set(
+    vehicles
+      .filter(
+        (vehicle) =>
+          typeof vehicle.driverId === "string" &&
+          vehicle.driverId.length > 0 &&
+          vehicle.status === "AVAILABLE"
+      )
+      .map((vehicle) => vehicle.driverId as string)
+  );
+
+  return result.drivers
+    .filter((driver) => eligibleDriverIds.has(driver.driverId))
+    .slice(0, limit);
 }
 export async function createRideRequest(
   bookingId: string,
@@ -397,6 +468,7 @@ export async function createRideRequest(
       {
         method: "POST",
         headers: internalHeaders,
+        signal: AbortSignal.timeout(DISPATCH_HTTP_TIMEOUT_MS),
         body: JSON.stringify({
           bookingId,
           driverId,

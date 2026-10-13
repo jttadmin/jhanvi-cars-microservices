@@ -11,6 +11,11 @@ import {
   MemcachedService
 } from "../cache/memcachedService";
 
+import {
+  validateDriverExists,
+  DriverValidationError
+} from "../clients/driver.client";
+
 export class VehicleService {
 
   private cache: MemcachedService;
@@ -94,6 +99,10 @@ export class VehicleService {
     vehicle: Vehicle
   ): Promise<Vehicle> {
 
+    if (vehicle.driverId) {
+      await validateDriverExists(vehicle.driverId);
+    }
+
     const created =
       await this.repository.create(vehicle);
 
@@ -119,12 +128,34 @@ export class VehicleService {
       return undefined;
     }
 
+    // An omitted driverId means "leave the current assignment unchanged".
+    // An explicit null means "remove the assignment".
+    const effectiveDriverId =
+      data.driverId === undefined
+        ? existing.driverId ?? null
+        : data.driverId;
+
+    const assignmentChanging =
+      effectiveDriverId !== (existing.driverId ?? null);
+
+    if (assignmentChanging && existing.status === "IN_USE") {
+      throw new DriverValidationError(
+        "Cannot change the driver assignment while the vehicle is in use",
+        409
+      );
+    }
+
+    if (effectiveDriverId) {
+      await validateDriverExists(effectiveDriverId);
+    }
+
     const updated =
       await this.repository.update(
         id,
         {
           id,
           ...data,
+          driverId: effectiveDriverId,
           status: existing.status
         }
       );

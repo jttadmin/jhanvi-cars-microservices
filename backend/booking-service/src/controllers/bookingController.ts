@@ -811,33 +811,11 @@ export class BookingController {
           });
       }
 
-      if (!booking.driverId) {
-        const assigned =
-          await this.service.updateBooking(id, {
-            userId: booking.userId,
-            driverId: driver.id,
-            pickupLocation: booking.pickupLocation,
-            dropoffLocation: booking.dropoffLocation,
-            scheduledAt: booking.scheduledAt,
-            fare: booking.fare
-          });
-
-        if (!assigned) {
-          return res
-            .status(404)
-            .json({
-              message:
-                "Booking not found"
-            });
-        }
-      }
-
       const updated =
-        await this.service
-          .updateBookingStatus(
-            id,
-            "CONFIRMED"
-          );
+        await this.service.confirmBookingFromDriver(
+          id,
+          driver.id
+        );
 
       if (!updated) {
         return res

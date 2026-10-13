@@ -7,11 +7,13 @@ import { getMe, logout as clearSession } from './api/auth';
 import { getToken, setSessionExpiredHandler } from './api/client';
 import type { AuthUser } from './types';
 import './App.css';
-
+import AdminDashboard from './components/AdminDashboard';
+import AdminLogin from './components/AdminLogin';
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
+  const isAdminPath = window.location.pathname.replace(/\/+$/, '') === '/admin';
 
   // Any 401 from any request logs the user out, wherever it happens.
   useEffect(() => {
@@ -40,6 +42,40 @@ export default function App() {
 
   if (checkingSession) {
     return <div className="app-loading">Loading…</div>;
+  }
+
+  if (isAdminPath) {
+    if (user?.role === 'ADMIN') {
+      return <AdminDashboard onLogout={handleLogout} />;
+    }
+
+    if (user) {
+      return (
+        <main className="admin-login-page">
+          <section className="admin-login-card">
+            <h1>Access denied</h1>
+            <p>This account is not authorized to access the Admin workspace.</p>
+            <button type="button" onClick={handleLogout}>Sign out</button>
+            <button type="button" className="admin-login-back" onClick={() => { window.location.href = '/'; }}>
+              Back to Jhanvi Cars
+            </button>
+          </section>
+        </main>
+      );
+    }
+
+    return (
+      <AdminLogin
+        onAuthenticated={(authenticatedUser) => {
+          if (authenticatedUser.role === 'ADMIN') {
+            setUser(authenticatedUser);
+          } else {
+            handleLogout();
+          }
+        }}
+        onBack={() => { window.location.href = '/'; }}
+      />
+    );
   }
 
   return (
@@ -72,12 +108,7 @@ export default function App() {
             onLogout={handleLogout}
           />
         ) : (
-          <div className="admin-placeholder">
-            <p>Admin dashboard is coming soon.</p>
-            <button className="logout-button" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
+          <AdminDashboard onLogout={handleLogout} />
         )}
       </main>
 

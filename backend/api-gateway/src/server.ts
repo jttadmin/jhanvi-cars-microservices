@@ -130,35 +130,52 @@ timeout: PROXY_TIMEOUT_MS,
 /*
 
 * ============================================================
-* DRIVER SERVICE
-* ============================================================
-*
-* CUSTOMER -> denied
-* DRIVER   -> allowed
-* ADMIN    -> allowed
-  */
-  app.use(
+/*
+ * ============================================================
+ * DRIVER SERVICE
+ * ============================================================
+ *
+ * GET /drivers list -> ADMIN only
+ * Other driver endpoints -> DRIVER or ADMIN
+ */
+
+app.get(
+  "/drivers",
+  authMiddleware,
+  requireRoles("ADMIN"),
+  createProxyMiddleware({
+    target: DRIVER_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/drivers",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+    on: {
+      proxyReq: injectInternalServiceToken,
+    },
+  })
+);
+
+app.use(
   "/drivers",
   authMiddleware,
   requireRoles("DRIVER", "ADMIN")
-  );
+);
 
 app.use(
-createProxyMiddleware({
-target: DRIVER_SERVICE_URL,
-changeOrigin: true,
-pathFilter: "/drivers",
-proxyTimeout: PROXY_TIMEOUT_MS,
-timeout: PROXY_TIMEOUT_MS,
-on: {
-  proxyReq: injectInternalServiceToken,
-},
-})
+  createProxyMiddleware({
+    target: DRIVER_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/drivers",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+    on: {
+      proxyReq: injectInternalServiceToken,
+    },
+  })
 );
 
 /*
 
-* ============================================================
 * BOOKING SERVICE
 * ============================================================
 *
@@ -187,31 +204,56 @@ app.use(
 );
 
 /*
+ * ============================================================
+ * VEHICLE SERVICE
+ * ============================================================
+ *
+ * Authenticate all vehicle requests. Restrict mutations to ADMIN.
+ * The internal service token is injected server-side.
+ */
 
-* ============================================================
-* VEHICLE SERVICE
-* ============================================================
-*
-* Public vehicle catalog for now.
-  */
-  app.use(
+app.use(
+  "/vehicles",
+  authMiddleware
+);
+
+// These explicit handlers authorize mutations and then continue
+// to the shared proxy below.
+app.post(
+  "/vehicles",
+  requireRoles("ADMIN"),
+  (_req, _res, next) => next()
+);
+
+app.put(
+  "/vehicles/:id",
+  requireRoles("ADMIN"),
+  (_req, _res, next) => next()
+);
+
+app.patch(
+  "/vehicles/:id/status",
+  requireRoles("ADMIN"),
+  (_req, _res, next) => next()
+);
+
+app.use(
   createProxyMiddleware({
-  target: VEHICLE_SERVICE_URL,
-  changeOrigin: true,
-  pathFilter: "/vehicles",
-  proxyTimeout: PROXY_TIMEOUT_MS,
-  timeout: PROXY_TIMEOUT_MS,
-  on: {
-    proxyReq: injectInternalServiceToken,
-  },
+    target: VEHICLE_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: "/vehicles",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+    on: {
+      proxyReq: injectInternalServiceToken,
+    },
   })
-  );
+);
 
 /*
-
-* ============================================================
-* PAYMENT SERVICE
-* ============================================================
+ * ============================================================
+ * PAYMENT SERVICE
+ * ============================================================
 *
 * Public API:
 * CUSTOMER -> allowed

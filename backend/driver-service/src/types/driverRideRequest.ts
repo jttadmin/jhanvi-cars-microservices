@@ -3,7 +3,8 @@ export type DriverRideRequestStatus =
   | "ACCEPTED"
   | "REJECTED"
   | "EXPIRED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "COMPLETED";
 
 export interface DriverRideRequest {
   id: string;

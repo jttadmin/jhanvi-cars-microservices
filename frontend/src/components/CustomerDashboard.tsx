@@ -81,12 +81,14 @@ const rideOptions: Array<{
   },
 ];
 
-function getCustomerRideMessage(status: Booking['status']): string {
-  switch (status) {
+function getCustomerRideMessage(ride: Booking): string {
+  switch (ride.status) {
     case 'PENDING':
       return 'Finding a driver for your ride';
     case 'CONFIRMED':
-      return 'Your driver has accepted the ride';
+      return ride.driverId
+        ? 'Your driver has accepted the ride'
+        : 'Confirming driver assignment…';
     case 'ONGOING':
       return 'Your ride is in progress';
     case 'COMPLETED':
@@ -1269,7 +1271,9 @@ export default function CustomerDashboard({
                         {ride.status === 'PENDING'
                           ? 'Finding a driver…'
                           : ride.status === 'CONFIRMED'
-                            ? 'Driver accepted'
+                            ? ride.driverId
+                              ? 'Driver accepted'
+                              : 'Confirming driver assignment…'
                             : ride.status === 'ONGOING'
                               ? 'Ride in progress'
                               : formatStatus(ride.status)}
@@ -1299,10 +1303,10 @@ export default function CustomerDashboard({
                   </div>
 
                   <div className="ride-message">
-                    {getCustomerRideMessage(ride.status)}
+                    {getCustomerRideMessage(ride)}
                   </div>
 
-                  {ride.status === 'CONFIRMED' && (
+                  {ride.status === 'CONFIRMED' && ride.driverId && (
                     <div className="driver-preview">
                       <div className="driver-avatar">D</div>
                       <div>

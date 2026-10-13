@@ -11,7 +11,8 @@ import {
 } from "../middleware/asyncHandler";
 
 import {
-  requireAuth
+  requireAuth,
+  requireInternalService
 } from "../middleware/auth.middleware";
 
 export function createBookingRoutes(
@@ -27,18 +28,21 @@ export function createBookingRoutes(
 
   router.patch(
     "/internal/:id/driver-accepted",
+    requireInternalService,
     asyncHandler(
       controller.driverAccepted
     )
   );
   router.patch(
     "/internal/:id/driver-expired",
+    requireInternalService,
     asyncHandler(
       controller.driverExpired
     )
   );
   router.patch(
     "/internal/:id/driver-rejected",
+    requireInternalService,
     asyncHandler(
       controller.driverRejected
     )
@@ -67,6 +71,7 @@ export function createBookingRoutes(
 
   router.get(
     "/internal/drivers/:driverId/rating-summary",
+    requireInternalService,
     asyncHandler(
       controller.getDriverRatingSummary
     )
@@ -74,6 +79,7 @@ export function createBookingRoutes(
 
   router.get(
     "/internal/drivers/:driverId/earnings",
+    requireInternalService,
     asyncHandler(
       controller.getDriverEarningsInternal
     )
@@ -81,6 +87,7 @@ export function createBookingRoutes(
 
   router.get(
     "/internal/drivers/:driverId/history",
+    requireInternalService,
     asyncHandler(
       controller.getDriverHistoryInternal
     )

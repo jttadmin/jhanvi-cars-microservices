@@ -124,6 +124,19 @@ export class DriverRideRequestRepository {
     });
   }
 
+  async findExpiredOfferedRideRequestIds(
+    limit = 100
+  ): Promise<string[]> {
+    const rows = await this.db("driver_ride_requests")
+      .where("status", "OFFERED")
+      .where("expires_at", "<=", this.db.fn.now())
+      .select("id")
+      .orderBy("expires_at", "asc")
+      .limit(limit);
+
+    return rows.map((row) => String(row.id));
+  }
+
   async expireRideRequest(
     id: string
   ): Promise<DriverRideRequest | null> {
@@ -161,4 +174,123 @@ export class DriverRideRequestRepository {
 
     return row ? this.mapRow(row) : null;
   }
+
+  async cancelConflictingAcceptance(
+    id: string,
+    driverId: string
+  ): Promise<boolean> {
+    return this.db.transaction(async (trx) => {
+      const driver = await trx("drivers")
+        .where("id", driverId)
+        .forUpdate()
+        .first();
+
+      if (!driver) {
+        return false;
+      }
+
+      const [row] = await trx("driver_ride_requests")
+        .where({
+          id,
+          driver_id: driverId,
+          status: "ACCEPTED",
+        })
+        .update({
+          status: "CANCELLED",
+          responded_at: trx.fn.now(),
+        })
+        .returning("id");
+
+      if (!row) {
+        return false;
+      }
+
+      // Keep the driver unavailable after a conflicting acceptance.
+      // Do not overwrite a possible manual availability change.
+      return true;
+    });
+  }
+
+
+  async cancelRideRequest(
+    bookingId: string,
+    driverId: string
+  ): Promise<DriverRideRequest | null> {
+    return this.db.transaction(async (trx) => {
+      const driver = await trx("drivers")
+        .where("id", driverId)
+        .forUpdate()
+        .first();
+
+      if (!driver) return null;
+
+      const [row] = await trx("driver_ride_requests")
+        .where({
+          booking_id: bookingId,
+          driver_id: driverId,
+          status: "ACCEPTED",
+        })
+        .update({
+          status: "CANCELLED",
+          responded_at: trx.fn.now(),
+        })
+        .returning("*");
+
+      if (row) return this.mapRow(row);
+
+      const cancelled = await trx("driver_ride_requests")
+        .where({
+          booking_id: bookingId,
+          driver_id: driverId,
+          status: "CANCELLED",
+        })
+        .first();
+
+      return cancelled ? this.mapRow(cancelled) : null;
+    });
+  }
+
+  async completeRideRequest(
+    bookingId: string,
+    driverId: string
+  ): Promise<DriverRideRequest | null> {
+    return this.db.transaction(async (trx) => {
+      const driver = await trx("drivers")
+        .where("id", driverId)
+        .forUpdate()
+        .first();
+
+      if (!driver) {
+        return null;
+      }
+
+      const [row] = await trx("driver_ride_requests")
+        .where({
+          booking_id: bookingId,
+          driver_id: driverId,
+          status: "ACCEPTED",
+        })
+        .update({
+          status: "COMPLETED",
+          responded_at: trx.fn.now(),
+        })
+        .returning("*");
+
+      if (row) {
+        return this.mapRow(row);
+      }
+
+      // Make retries idempotent for this exact booking and driver.
+      const completed = await trx("driver_ride_requests")
+        .where({
+          booking_id: bookingId,
+          driver_id: driverId,
+          status: "COMPLETED",
+        })
+        .first();
+
+      return completed ? this.mapRow(completed) : null;
+    });
+  }
+
 }

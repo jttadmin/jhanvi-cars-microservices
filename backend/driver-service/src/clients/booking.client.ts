@@ -4,6 +4,17 @@ const internalHeaders = {
     process.env.INTERNAL_SERVICE_TOKEN ?? "",
 };
 
+export class BookingServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode?: number,
+    public readonly isCompetingDriverConflict: boolean = false
+  ) {
+    super(message);
+    this.name = "BookingServiceError";
+  }
+}
+
 export async function notifyBookingAccepted(
   bookingId: string,
   driverId: string
@@ -20,20 +31,81 @@ export async function notifyBookingAccepted(
       {
         method: "PATCH",
         headers: internalHeaders,
-        body: JSON.stringify({
-          driverId,
-        }),
+        body: JSON.stringify({ driverId }),
       }
     );
   } catch {
-    throw new Error("Booking Service is unavailable");
+    throw new BookingServiceError(
+      "Booking Service is unavailable"
+    );
   }
 
   if (!response.ok) {
-    throw new Error(
-      `Booking Service returned HTTP ${response.status}`
+    const bodyText = await response.text();
+
+    let responseBody: { message?: string; code?: string } = {};
+
+    try {
+      responseBody = JSON.parse(bodyText);
+    } catch {
+      // Use the fallback message for non-JSON responses.
+    }
+
+    const message =
+      responseBody.message ||
+      `Booking Service returned HTTP ${response.status}`;
+
+    const isCompetingDriverConflict =
+      response.status === 409 &&
+      responseBody.code === "BOOKING_ALREADY_CLAIMED";
+
+    throw new BookingServiceError(
+      message,
+      response.status,
+      isCompetingDriverConflict
     );
   }
+}
+
+export async function getBookingAcceptanceState(
+  bookingId: string
+): Promise<{
+  id: string;
+  status: string;
+  driverId?: string | null;
+}> {
+  const bookingBaseUrl =
+    process.env.BOOKING_SERVICE_URL ??
+    "http://localhost:3004";
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${bookingBaseUrl}/bookings/${encodeURIComponent(bookingId)}`,
+      {
+        method: "GET",
+        headers: internalHeaders,
+      }
+    );
+  } catch {
+    throw new BookingServiceError(
+      "Could not verify booking acceptance outcome"
+    );
+  }
+
+  if (!response.ok) {
+    throw new BookingServiceError(
+      `Could not verify booking acceptance outcome (HTTP ${response.status})`,
+      response.status
+    );
+  }
+
+  return (await response.json()) as {
+    id: string;
+    status: string;
+    driverId?: string | null;
+  };
 }
 
 export async function notifyBookingRejected(
@@ -52,9 +124,7 @@ export async function notifyBookingRejected(
       {
         method: "PATCH",
         headers: internalHeaders,
-        body: JSON.stringify({
-          driverId,
-        }),
+        body: JSON.stringify({ driverId }),
       }
     );
   } catch {
@@ -67,7 +137,6 @@ export async function notifyBookingRejected(
     );
   }
 }
-
 
 export async function notifyBookingExpired(
   bookingId: string,
@@ -85,9 +154,7 @@ export async function notifyBookingExpired(
       {
         method: "PATCH",
         headers: internalHeaders,
-        body: JSON.stringify({
-          driverId,
-        }),
+        body: JSON.stringify({ driverId }),
       }
     );
   } catch {
@@ -107,7 +174,6 @@ export async function getDriverRatingSummary(
   averageRating: number;
   totalRatings: number;
 }> {
-
   const bookingBaseUrl =
     process.env.BOOKING_SERVICE_URL ??
     "http://localhost:3004";
@@ -116,7 +182,7 @@ export async function getDriverRatingSummary(
     `${bookingBaseUrl}/bookings/internal/drivers/${driverId}/rating-summary`,
     {
       method: "GET",
-      headers: internalHeaders
+      headers: internalHeaders,
     }
   );
 
@@ -144,7 +210,6 @@ export async function getDriverEarnings(
   weekTrips: number;
   weekEarnings: number;
 }> {
-
   const bookingBaseUrl =
     process.env.BOOKING_SERVICE_URL ??
     "http://localhost:3004";
@@ -153,7 +218,7 @@ export async function getDriverEarnings(
     `${bookingBaseUrl}/bookings/internal/drivers/${driverId}/earnings`,
     {
       method: "GET",
-      headers: internalHeaders
+      headers: internalHeaders,
     }
   );
 
@@ -175,7 +240,6 @@ export async function getDriverEarnings(
   }>;
 }
 
-
 export async function getDriverHistory(
   driverId: string
 ): Promise<Array<{
@@ -191,7 +255,6 @@ export async function getDriverHistory(
   fare: number;
   vehicleType?: "AUTO" | "ECONOMY" | "COMFORT" | "COMFORT_PLUS";
 }>> {
-
   const bookingBaseUrl =
     process.env.BOOKING_SERVICE_URL ??
     "http://localhost:3004";
@@ -200,7 +263,7 @@ export async function getDriverHistory(
     `${bookingBaseUrl}/bookings/internal/drivers/${driverId}/history`,
     {
       method: "GET",
-      headers: internalHeaders
+      headers: internalHeaders,
     }
   );
 

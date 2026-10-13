@@ -16,6 +16,17 @@ export function errorHandler(
     });
   }
 
+  if (
+    typeof err?.statusCode === "number" &&
+    err.statusCode >= 400 &&
+    err.statusCode < 600
+  ) {
+    return res.status(err.statusCode).json({
+      message: err.message || "Request failed",
+      ...(typeof err.code === "string" ? { code: err.code } : {}),
+    });
+  }
+
   return res.status(500).json({
     message: "Internal server error",
   });

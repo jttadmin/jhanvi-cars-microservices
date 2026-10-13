@@ -25,6 +25,8 @@ import {
   refundPayment
 } from "../clients/payment.client";
 
+import { BookingError } from "../errors/BookingError";
+
 export class BookingService {
 
   constructor(
@@ -139,6 +141,22 @@ export class BookingService {
       return undefined;
     }
 
+    /*
+     * A confirmed or active booking must not lose or change
+     * its assigned driver through the generic update endpoint.
+     * Reassignment requires a dedicated, coordinated workflow.
+     */
+    if (
+      ["CONFIRMED", "ONGOING", "COMPLETED"].includes(existing.status) &&
+      data.driverId !== existing.driverId
+    ) {
+      throw new BookingError(
+        409,
+        "Cannot change the assigned driver for a confirmed or active booking",
+        "DRIVER_REASSIGNMENT_NOT_ALLOWED"
+      );
+    }
+
     if (data.driverId) {
       await validateDriverAndVehicle(
         data.driverId
@@ -187,8 +205,10 @@ export class BookingService {
      * the driver acceptance workflow.
      */
     if (existing.status !== "PENDING") {
-      throw new Error(
-        `Booking cannot be confirmed from status ${existing.status}`
+      throw new BookingError(
+        409,
+        `Booking cannot be confirmed from status ${existing.status}`,
+        "BOOKING_NOT_PENDING"
       );
     }
 
@@ -199,14 +219,33 @@ export class BookingService {
       driverId
     );
 
-    return this.repository.update(
-      bookingId,
-      {
-        ...existing,
-        driverId,
-        status: "CONFIRMED"
+    const claimed =
+      await this.repository.claimPendingBooking(
+        bookingId,
+        driverId
+      );
+
+    if (claimed === undefined) {
+      // Another acceptance may have claimed the booking
+      // after our initial read.
+      const latest =
+        await this.repository.findById(bookingId);
+
+      if (
+        latest?.status === "CONFIRMED" &&
+        latest.driverId === driverId
+      ) {
+        return latest;
       }
-    );
+
+      throw new BookingError(
+        409,
+        "Booking has already been claimed by another driver",
+        "BOOKING_ALREADY_CLAIMED"
+      );
+    }
+
+    return claimed;
   }
 
   private async dispatchNextDriver(
@@ -255,52 +294,42 @@ export class BookingService {
     bookingId: string,
     driverId: string
   ): Promise<Booking | undefined> {
+    return this.repository.withDispatchLock(
+      bookingId,
+      async () => {
+        // Re-read after locking so concurrent callbacks see the latest state.
+        const existing =
+          await this.repository.findById(bookingId);
 
-    const existing =
-      await this.repository.findById(bookingId);
+        if (!existing || existing.status !== "PENDING") {
+          return existing;
+        }
 
-    if (!existing) {
-      return undefined;
-    }
-
-    /*
-     * Only pending bookings can continue dispatching.
-     * If another driver already confirmed the booking,
-     * the rejection is no longer actionable.
-     */
-    if (existing.status !== "PENDING") {
-      return existing;
-    }
-
-    await this.dispatchNextDriver(
-      existing,
-      driverId
+        await this.dispatchNextDriver(existing, driverId);
+        return existing;
+      }
     );
-
-    return existing;
   }
 
   async handleDriverExpired(
     bookingId: string,
     driverId: string
   ): Promise<Booking | undefined> {
-    const existing =
-      await this.repository.findById(bookingId);
+    return this.repository.withDispatchLock(
+      bookingId,
+      async () => {
+        // Re-read after locking so concurrent callbacks see the latest state.
+        const existing =
+          await this.repository.findById(bookingId);
 
-    if (!existing) {
-      return undefined;
-    }
+        if (!existing || existing.status !== "PENDING") {
+          return existing;
+        }
 
-    if (existing.status !== "PENDING") {
-      return existing;
-    }
-
-    await this.dispatchNextDriver(
-      existing,
-      driverId
+        await this.dispatchNextDriver(existing, driverId);
+        return existing;
+      }
     );
-
-    return existing;
   }
 
   async updateBookingStatus(
@@ -317,6 +346,14 @@ export class BookingService {
 
     if (!existing) {
       return undefined;
+    }
+
+    if (status === "CONFIRMED" && !existing.driverId) {
+      throw new BookingError(
+        409,
+        "Cannot confirm a booking without an assigned driver",
+        "DRIVER_ASSIGNMENT_REQUIRED"
+      );
     }
 
     validateBookingStatusTransition(
@@ -353,6 +390,7 @@ export class BookingService {
       existing.driverId
     ) {
       await syncDriverVehicleForBooking(
+        id,
         existing.driverId,
         "START_TRIP"
       );
@@ -368,6 +406,7 @@ export class BookingService {
       existing.driverId
     ) {
       await syncDriverVehicleForBooking(
+        id,
         existing.driverId,
         "END_TRIP"
       );
@@ -383,6 +422,7 @@ export class BookingService {
       existing.driverId
     ) {
       await syncDriverVehicleForBooking(
+        id,
         existing.driverId,
         "CANCEL_TRIP"
       );

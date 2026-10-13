@@ -80,8 +80,21 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     setLocationError(null);
 
     try {
-      await setAvailability(next);
-      await setOnline(next);
+      if (next) {
+        // The backend requires the driver to be online before enabling availability.
+        await setOnline(true);
+
+        try {
+          await setAvailability(true);
+        } catch (err) {
+          // Roll back the online state if availability could not be enabled.
+          await setOnline(false).catch(() => undefined);
+          throw err;
+        }
+      } else {
+        // Going offline also clears availability in the backend.
+        await setOnline(false);
+      }
 
       setIsAvailable(next);
       setDriverProfile((current) =>
@@ -97,7 +110,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       setAvailabilityError(
         err instanceof ApiError
           ? err.message
-          : 'Could not update your availability.'
+          : 'Could not update your online status.'
       );
     } finally {
       setAvailabilityLoading(false);

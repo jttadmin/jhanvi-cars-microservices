@@ -257,4 +257,39 @@ export class BookingRepository {
 
     return this.mapBooking(row);
   }
+
+  async withDispatchLock<T>(
+    bookingId: string,
+    work: () => Promise<T>
+  ): Promise<T> {
+    return this.db.transaction(async (trx) => {
+      // Serialize dispatch callbacks for this booking across service instances.
+      await trx.raw(
+        "SELECT pg_advisory_xact_lock(hashtext(?))",
+        [bookingId]
+      );
+
+      return work();
+    });
+  }
+
+  async claimPendingBooking(
+    id: string,
+    driverId: string
+  ): Promise<Booking | undefined> {
+    const [row] = await this.db("bookings")
+      .where({
+        id,
+        status: "PENDING",
+      })
+      .update({
+        driver_id: driverId,
+        status: "CONFIRMED",
+        updated_at: this.db.fn.now(),
+      })
+      .returning("*");
+
+    return row ? this.mapBooking(row) : undefined;
+  }
+
 }

@@ -64,8 +64,34 @@ app.use(
 // Centralized error handler
 app.use(errorHandler);
 
+// Automatically expire unanswered ride offers and notify Booking Service.
+const RIDE_REQUEST_EXPIRY_POLL_MS = 5_000;
+let expiryPollRunning = false;
+
+const expiryPollTimer = setInterval(async () => {
+  if (expiryPollRunning) {
+    return;
+  }
+
+  expiryPollRunning = true;
+
+  try {
+    await rideRequestService.processExpiredRideRequests(100);
+  } catch (error) {
+    console.error("Ride-request expiry polling failed", error);
+  } finally {
+    expiryPollRunning = false;
+  }
+}, RIDE_REQUEST_EXPIRY_POLL_MS);
+
+// Do not keep the process alive solely because of the polling timer.
+expiryPollTimer.unref();
+
 const PORT = process.env.PORT || 3003;
 
 app.listen(PORT, () => {
   console.log(`Driver service running on port ${PORT}`);
+  console.log(
+    `Ride-request expiry worker polling every ${RIDE_REQUEST_EXPIRY_POLL_MS}ms`
+  );
 });
