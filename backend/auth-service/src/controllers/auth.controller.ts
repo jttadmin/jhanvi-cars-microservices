@@ -31,6 +31,29 @@ export const authController = {
   },
 
 
+
+  async getInternalUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.params.id;
+
+      if (
+        !userId ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)
+      ) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_USER_ID', message: 'A valid UUID user ID is required' },
+        });
+        return;
+      }
+
+      const user = await authService.getById(userId);
+      res.status(200).json({ success: true, data: { user } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
       if (!req.auth) {

@@ -1,13 +1,6 @@
-export type NotificationChannel =
-  | "EMAIL"
-  | "SMS"
-  | "PUSH";
+export type NotificationChannel = "EMAIL" | "SMS" | "PUSH";
 
-export type NotificationStatus =
-  | "PENDING"
-  | "SENT"
-  | "FAILED"
-  | "READ";
+export type NotificationStatus = "PENDING" | "SENT" | "FAILED" | "READ";
 
 export interface Notification {
   id: string;
@@ -18,6 +11,10 @@ export interface Notification {
   message: string;
   status: NotificationStatus;
   recipient: string;
+  idempotencyKey?: string | null;
+  attemptCount?: number;
+  nextAttemptAt?: string | null;
+  lastError?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

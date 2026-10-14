@@ -66,39 +66,28 @@ export async function getPaymentByBookingId(
 export async function refundPayment(
   paymentId: string
 ): Promise<Payment> {
-
   let response: Response;
 
   try {
     response = await fetch(
-      `${paymentServiceUrl}/payments/${encodeURIComponent(paymentId)}/status`,
+      `${paymentServiceUrl}/payments/${encodeURIComponent(paymentId)}/refund`,
       {
-        method: "PATCH",
-        headers: internalHeaders,
-        body: JSON.stringify({
-          status: "REFUNDED"
-        })
+        method: "POST",
+        headers: internalHeaders
       }
     );
   } catch {
-    const error = new Error(
-      "Payment Service is unavailable"
-    );
-
+    const error = new Error("Payment Service is unavailable");
     (error as any).statusCode = 503;
-
     throw error;
   }
 
   if (!response.ok) {
-    const body = await response.text();
-
+    const body = await response.json().catch(() => ({}));
     const error = new Error(
-      `Payment Service returned ${response.status}: ${body}`
+      body.message || `Payment Service returned HTTP ${response.status}`
     );
-
-    (error as any).statusCode = 503;
-
+    (error as any).statusCode = response.status;
     throw error;
   }
 

@@ -32,6 +32,8 @@ export interface Booking {
   vehicleType?: string;
   scheduledAt: string;
   status: BookingStatus;
+  paymentStatus?: 'PENDING' | 'AUTHORIZED' | 'PAID' | 'FAILED' | 'REFUNDED';
+  refundStatus?: string | null;
   customerId?: string;
   driverId?: string;
   createdAt?: string;

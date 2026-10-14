@@ -298,6 +298,20 @@ export const paymentController = {
     );
   },
 
+  refund: async (req: Request, res: Response) => {
+    if (!req.internalService) {
+      return res.status(403).json({
+        message: "Refunds can only be initiated by an internal service"
+      });
+    }
+
+    const payment = await paymentService.refundPayment(
+      String(req.params.id)
+    );
+
+    return res.json(payment);
+  },
+
   updateStatus: async (
     req: Request,
     res: Response
@@ -322,6 +336,12 @@ export const paymentController = {
       return res.status(400).json({
         message: "Validation failed",
         errors: parsed.error.flatten()
+      });
+    }
+
+    if (parsed.data.status === "REFUNDED") {
+      return res.status(403).json({
+        message: "Use the dedicated refund operation"
       });
     }
 

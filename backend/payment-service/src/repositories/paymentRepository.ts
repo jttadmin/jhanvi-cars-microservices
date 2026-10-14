@@ -10,6 +10,9 @@ type PaymentRow = {
   method: PaymentMethod;
   status: PaymentStatus;
   transaction_id: string | null;
+  refund_id: string | null;
+  refund_request_id: string | null;
+  refund_status: string | null;
   created_at?: Date | string;
   updated_at?: Date | string;
 };
@@ -23,6 +26,9 @@ const mapRow = (row: PaymentRow): Payment => ({
   method: row.method,
   status: row.status,
   transactionId: row.transaction_id,
+  refundId: row.refund_id,
+  refundRequestId: row.refund_request_id,
+  refundStatus: row.refund_status,
   createdAt: row.created_at?.toString(),
   updatedAt: row.updated_at?.toString()
 });
@@ -95,6 +101,41 @@ export const paymentRepository = {
       .where({ id })
       .update({
         transaction_id: transactionId,
+        updated_at: db.fn.now()
+      })
+      .returning("*");
+
+    return row ? mapRow(row) : null;
+  },
+
+  async claimRefund(id: string, requestId: string) {
+    const [row] = await db<PaymentRow>("payments")
+      .where({ id, status: "PAID" })
+      .whereNull("refund_status")
+      .update({
+        refund_request_id: requestId,
+        refund_status: "REQUESTED",
+        updated_at: db.fn.now()
+      })
+      .returning("*");
+
+    return row ? mapRow(row) : null;
+  },
+
+  async updateRefundDetails(
+    id: string,
+    details: {
+      refundId?: string | null;
+      refundStatus: string;
+    }
+  ) {
+    const [row] = await db<PaymentRow>("payments")
+      .where({ id })
+      .update({
+        ...(details.refundId !== undefined
+          ? { refund_id: details.refundId }
+          : {}),
+        refund_status: details.refundStatus,
         updated_at: db.fn.now()
       })
       .returning("*");

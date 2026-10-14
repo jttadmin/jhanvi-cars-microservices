@@ -16,6 +16,9 @@ export interface Payment {
   method: PaymentMethod;
   status: PaymentStatus;
   transactionId?: string | null;
+  refundId?: string | null;
+  refundRequestId?: string | null;
+  refundStatus?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

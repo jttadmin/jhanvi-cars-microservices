@@ -74,6 +74,13 @@ router.put(
   )
 );
 
+router.post(
+  "/payments/:id/refund",
+  asyncHandler(
+    paymentController.refund
+  )
+);
+
 router.patch(
   "/payments/:id/status",
   asyncHandler(

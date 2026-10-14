@@ -1,6 +1,12 @@
+
 import bcrypt from 'bcrypt';
-import { ConflictError, NotFoundError, UnauthorizedError } from '../errors/AppError';
+import {
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../errors/AppError';
 import { toPublicUser, PublicUser } from '../models/user.model';
+import { sendWelcomeEmail } from '../clients/notification.client';
 import { userRepository } from '../repositories/user.repository';
 import {
   RegisterInput,
@@ -14,17 +20,25 @@ import { createDriverProfile } from './driver-profile.client';
 const SALT_ROUNDS = 10;
 
 export const authService = {
-  async register(input: RegisterInput): Promise<{ user: PublicUser; token: string }> {
+  async register(
+    input: RegisterInput,
+  ): Promise<{ user: PublicUser; token: string }> {
     const existingEmail = await userRepository.findByEmail(input.email);
+
     if (existingEmail) {
       throw new ConflictError('Email is already registered');
     }
-    const existingMobile = await userRepository.findByMobileNumber(input.mobileNumber);
+
+    const existingMobile = await userRepository.findByMobileNumber(
+      input.mobileNumber,
+    );
+
     if (existingMobile) {
       throw new ConflictError('Mobile number is already registered');
     }
 
     const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+
     const created = await userRepository.create({
       fullName: input.fullName,
       email: input.email,
@@ -33,7 +47,10 @@ export const authService = {
       role: input.role,
     });
 
-    const token = await tokenProvider.issue({ sub: created.id, role: created.role });
+    const token = await tokenProvider.issue({
+      sub: created.id,
+      role: created.role,
+    });
 
     await initializeUserProfile({
       userId: created.id,
@@ -65,26 +82,49 @@ export const authService = {
       });
     }
 
+    try {
+      await sendWelcomeEmail({
+        id: created.id,
+        email: created.email,
+        fullName: created.full_name,
+      });
+    } catch (error) {
+      console.error(
+        'Welcome email notification failed:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+
     return { user: toPublicUser(created), token };
   },
 
-  async login(input: LoginInput): Promise<{ user: PublicUser; token: string }> {
+  async login(
+    input: LoginInput,
+  ): Promise<{ user: PublicUser; token: string }> {
     const existing = input.identifier.includes('@')
       ? await userRepository.findByEmail(input.identifier)
       : await userRepository.findByMobileNumber(input.identifier);
+
     if (!existing) {
       throw new UnauthorizedError("Account doesn't exist. Please sign up.");
     }
 
-    const passwordMatches = await bcrypt.compare(input.password, existing.password_hash);
+    const passwordMatches = await bcrypt.compare(
+      input.password,
+      existing.password_hash,
+    );
+
     if (!passwordMatches) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const token = await tokenProvider.issue({ sub: existing.id, role: existing.role });
+    const token = await tokenProvider.issue({
+      sub: existing.id,
+      role: existing.role,
+    });
+
     return { user: toPublicUser(existing), token };
   },
-
 
   async updateProfile(
     userId: string,
@@ -124,9 +164,11 @@ export const authService = {
 
   async getById(userId: string): Promise<PublicUser> {
     const user = await userRepository.findById(userId);
+
     if (!user) {
       throw new NotFoundError('User not found');
     }
+
     return toPublicUser(user);
   },
 };

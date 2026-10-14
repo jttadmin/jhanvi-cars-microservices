@@ -3,7 +3,7 @@ import BrandMark from './BrandMark';
 import { RideIcon } from './RideIcons';
 import GoogleRideMap from './GoogleRideMap';
 import { loadGoogleMaps, attachAutocomplete, computeRoute } from '../api/googleMaps';
-import { cancelBooking, createBooking, getBookings } from '../api/bookings';
+import { cancelBooking, createBooking, getBookingsWithRefundStatus } from '../api/bookings';
 import {
   createPayment,
   createRazorpayOrder,
@@ -94,6 +94,21 @@ function getCustomerRideMessage(ride: Booking): string {
     case 'COMPLETED':
       return 'Your ride has been completed';
     case 'CANCELLED':
+      if (
+        ride.refundStatus === 'REQUESTED' ||
+        ride.refundStatus === 'PENDING'
+      ) {
+        return 'Ride cancelled — refund processing';
+      }
+      if (
+        ride.refundStatus === 'PROCESSED' ||
+        ride.paymentStatus === 'REFUNDED'
+      ) {
+        return 'Ride cancelled — refund completed';
+      }
+      if (ride.refundStatus === 'FAILED') {
+        return 'Ride cancelled — refund failed; please contact support';
+      }
       return 'This ride was cancelled';
     default:
       return '';
@@ -221,7 +236,7 @@ export default function CustomerDashboard({
     setRidesLoading(true);
     setRidesError(null);
 
-    getBookings()
+    getBookingsWithRefundStatus()
       .then(setBookings)
       .catch((err) =>
         setRidesError(
@@ -238,7 +253,7 @@ export default function CustomerDashboard({
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (user && document.visibilityState === 'visible') {
-        getBookings()
+        getBookingsWithRefundStatus()
           .then(setBookings)
           .catch((err) => {
             if (err instanceof ApiError) {

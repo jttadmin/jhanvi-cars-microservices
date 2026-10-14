@@ -43,3 +43,75 @@ export async function cancelBooking(id: string): Promise<Booking> {
     },
   });
 }
+
+
+type BookingPaymentStatus = {
+  status: 'PENDING' | 'AUTHORIZED' | 'PAID' | 'FAILED' | 'REFUNDED';
+  refundStatus?: string | null;
+};
+
+const refundStatusCache = new Map<
+  string,
+  { value: BookingPaymentStatus | null; expiresAt: number; terminal: boolean }
+>();
+
+const REFUND_STATUS_CACHE_TTL_MS = 15_000;
+
+/** Retrieve payment/refund status using the authenticated payment endpoint. */
+export async function getBookingPaymentStatus(
+  bookingId: string
+): Promise<BookingPaymentStatus | null> {
+  const cached = refundStatusCache.get(bookingId);
+
+  if (
+    cached &&
+    (cached.terminal || cached.expiresAt > Date.now())
+  ) {
+    return cached.value;
+  }
+
+  try {
+    const payment = await apiRequest<BookingPaymentStatus>(
+      `/payments/booking/${encodeURIComponent(bookingId)}`
+    );
+
+    const terminal =
+      payment.refundStatus === 'PROCESSED' ||
+      payment.refundStatus === 'FAILED' ||
+      payment.status === 'REFUNDED';
+
+    refundStatusCache.set(bookingId, {
+      value: payment,
+      expiresAt: terminal ? Number.POSITIVE_INFINITY : Date.now() + REFUND_STATUS_CACHE_TTL_MS,
+      terminal,
+    });
+
+    return payment;
+  } catch {
+    // Retry later; never interpret a lookup failure as a completed refund.
+    refundStatusCache.set(bookingId, {
+      value: null,
+      expiresAt: Date.now() + REFUND_STATUS_CACHE_TTL_MS,
+      terminal: false,
+    });
+    return null;
+  }
+}
+
+/** Enrich cancelled rides with the current refund status. */
+export async function getBookingsWithRefundStatus(): Promise<Booking[]> {
+  const rides = await getBookings();
+  return Promise.all(
+    rides.map(async (ride) => {
+      if (ride.status !== 'CANCELLED') return ride;
+      const payment = await getBookingPaymentStatus(ride.id);
+      return payment
+        ? {
+            ...ride,
+            paymentStatus: payment.status,
+            refundStatus: payment.refundStatus ?? null,
+          }
+        : ride;
+    })
+  );
+}

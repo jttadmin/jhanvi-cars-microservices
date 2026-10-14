@@ -24,7 +24,8 @@ const createNotificationSchema = z.object({
   title: z.string().min(1).max(200),
   message: z.string().min(1).max(5000),
   status: statusSchema.default("PENDING"),
-  recipient: z.string().min(1).max(320)
+  recipient: z.string().min(1).max(320),
+  idempotencyKey: z.string().min(1).max(200).optional()
 });
 
 const updateNotificationSchema = z.object({

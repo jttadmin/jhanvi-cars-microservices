@@ -1,3 +1,4 @@
+
 import {
   Booking,
   BookingStatus
@@ -17,52 +18,59 @@ import {
 } from "../clients/driverVehicle.client";
 
 import {
-  validateBookingStatusTransition
-} from "./bookingStatus";
-
-import {
   getPaymentByBookingId,
   refundPayment
 } from "../clients/payment.client";
 
+import {
+  notifyBookingCreated,
+  notifyBookingStatus
+} from "../clients/notification.client";
+
+import {
+  validateBookingStatusTransition
+} from "./bookingStatus";
+
 import { BookingError } from "../errors/BookingError";
 
 export class BookingService {
-
   constructor(
-    private repository:
-      BookingRepository
+    private repository: BookingRepository
   ) {}
 
-  async getAllBookings():
-    Promise<Booking[]> {
-
-    return this.repository
-      .findAll();
+  private async sendNotificationSafely(
+    action: string,
+    userId: string,
+    bookingId: string,
+    status?: string
+  ): Promise<void> {
+    try {
+      if (status) {
+        await notifyBookingStatus(userId, bookingId, status);
+      } else {
+        await notifyBookingCreated(userId, bookingId);
+      }
+    } catch (error) {
+      console.error(
+        `${action} notification failed:`,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
   }
 
-  async getBookingById(
-    id: string
-  ):
-    Promise<
-      Booking | undefined
-    > {
-
-    return this.repository
-      .findById(id);
+  async getAllBookings(): Promise<Booking[]> {
+    return this.repository.findAll();
   }
 
-  async getBookingsByDriverId(
-    driverId: string
-  ): Promise<Booking[]> {
-
-    return this.repository
-      .findByDriverId(driverId);
+  async getBookingById(id: string): Promise<Booking | undefined> {
+    return this.repository.findById(id);
   }
 
-  async getDriverEarnings(
-    driverId: string
-  ): Promise<{
+  async getBookingsByDriverId(driverId: string): Promise<Booking[]> {
+    return this.repository.findByDriverId(driverId);
+  }
+
+  async getDriverEarnings(driverId: string): Promise<{
     totalTrips: number;
     totalEarnings: number;
     todayTrips: number;
@@ -70,42 +78,32 @@ export class BookingService {
     weekTrips: number;
     weekEarnings: number;
   }> {
-
-    return this.repository
-      .getDriverEarnings(driverId);
+    return this.repository.getDriverEarnings(driverId);
   }
 
-  async createBooking(
-    booking: Booking
-  ): Promise<Booking> {
-
+  async createBooking(booking: Booking): Promise<Booking> {
     if (booking.driverId) {
-      await validateDriverAndVehicle(
-        booking.driverId
-      );
+      await validateDriverAndVehicle(booking.driverId);
     }
 
-    const createdBooking =
-      await this.repository.create({
-        ...booking,
-        status: "PENDING"
-      });
+    const createdBooking = await this.repository.create({
+      ...booking,
+      status: "PENDING"
+    });
 
     if (
       !createdBooking.driverId &&
       createdBooking.pickupLatitude != null &&
       createdBooking.pickupLongitude != null
     ) {
-      const nearbyDrivers =
-        await findNearbyDrivers(
-          createdBooking.pickupLatitude,
-          createdBooking.pickupLongitude,
-          5,
-          10
-        );
+      const nearbyDrivers = await findNearbyDrivers(
+        createdBooking.pickupLatitude,
+        createdBooking.pickupLongitude,
+        5,
+        10
+      );
 
-      const nearestDriver =
-        nearbyDrivers[0];
+      const nearestDriver = nearbyDrivers[0];
 
       if (nearestDriver) {
         await createRideRequest(
@@ -118,24 +116,20 @@ export class BookingService {
       }
     }
 
+    await this.sendNotificationSafely(
+      "Booking-created",
+      createdBooking.userId,
+      createdBooking.id
+    );
+
     return createdBooking;
   }
 
   async updateBooking(
     id: string,
-
-    data: Omit<
-      Booking,
-      "id" | "status"
-    >
-  ):
-    Promise<
-      Booking | undefined
-    > {
-
-    const existing =
-      await this.repository
-        .findById(id);
+    data: Omit<Booking, "id" | "status">
+  ): Promise<Booking | undefined> {
+    const existing = await this.repository.findById(id);
 
     if (!existing) {
       return undefined;
@@ -144,7 +138,6 @@ export class BookingService {
     /*
      * A confirmed or active booking must not lose or change
      * its assigned driver through the generic update endpoint.
-     * Reassignment requires a dedicated, coordinated workflow.
      */
     if (
       ["CONFIRMED", "ONGOING", "COMPLETED"].includes(existing.status) &&
@@ -158,40 +151,28 @@ export class BookingService {
     }
 
     if (data.driverId) {
-      await validateDriverAndVehicle(
-        data.driverId
-      );
+      await validateDriverAndVehicle(data.driverId);
     }
 
-    return this.repository.update(
+    return this.repository.update(id, {
       id,
-      {
-        id,
-
-        ...data,
-
-        status:
-          existing.status
-      }
-    );
+      ...data,
+      status: existing.status
+    });
   }
 
   async confirmBookingFromDriver(
     bookingId: string,
     driverId: string
   ): Promise<Booking | undefined> {
-
-    const existing =
-      await this.repository.findById(bookingId);
+    const existing = await this.repository.findById(bookingId);
 
     if (!existing) {
       return undefined;
     }
 
     /*
-     * Idempotency:
-     * if the same driver callback is delivered again
-     * after confirmation, return the already-confirmed booking.
+     * Repeated acceptance by the same driver is idempotent.
      */
     if (
       existing.status === "CONFIRMED" &&
@@ -200,10 +181,6 @@ export class BookingService {
       return existing;
     }
 
-    /*
-     * Only a pending booking can be claimed by
-     * the driver acceptance workflow.
-     */
     if (existing.status !== "PENDING") {
       throw new BookingError(
         409,
@@ -212,24 +189,15 @@ export class BookingService {
       );
     }
 
-    /*
-     * Validate the driver before assigning the booking.
-     */
-    await validateDriverAndVehicleForAssignment(
+    await validateDriverAndVehicleForAssignment(driverId);
+
+    const claimed = await this.repository.claimPendingBooking(
+      bookingId,
       driverId
     );
 
-    const claimed =
-      await this.repository.claimPendingBooking(
-        bookingId,
-        driverId
-      );
-
     if (claimed === undefined) {
-      // Another acceptance may have claimed the booking
-      // after our initial read.
-      const latest =
-        await this.repository.findById(bookingId);
+      const latest = await this.repository.findById(bookingId);
 
       if (
         latest?.status === "CONFIRMED" &&
@@ -245,6 +213,13 @@ export class BookingService {
       );
     }
 
+    await this.sendNotificationSafely(
+      "Booking-confirmed",
+      claimed.userId,
+      claimed.id,
+      claimed.status
+    );
+
     return claimed;
   }
 
@@ -259,23 +234,20 @@ export class BookingService {
       return;
     }
 
-    const previouslyOffered =
-      await getRideRequestDriverIds(booking.id);
+    const previouslyOffered = await getRideRequestDriverIds(booking.id);
 
-    const nearbyDrivers =
-      await findNearbyDrivers(
-        booking.pickupLatitude,
-        booking.pickupLongitude,
-        5,
-        10
-      );
+    const nearbyDrivers = await findNearbyDrivers(
+      booking.pickupLatitude,
+      booking.pickupLongitude,
+      5,
+      10
+    );
 
-    const nextDriver =
-      nearbyDrivers.find(
-        (driver) =>
-          !previouslyOffered.includes(driver.driverId) &&
-          driver.driverId !== excludedDriverId
-      );
+    const nextDriver = nearbyDrivers.find(
+      driver =>
+        !previouslyOffered.includes(driver.driverId) &&
+        driver.driverId !== excludedDriverId
+    );
 
     if (!nextDriver) {
       return;
@@ -297,9 +269,7 @@ export class BookingService {
     return this.repository.withDispatchLock(
       bookingId,
       async () => {
-        // Re-read after locking so concurrent callbacks see the latest state.
-        const existing =
-          await this.repository.findById(bookingId);
+        const existing = await this.repository.findById(bookingId);
 
         if (!existing || existing.status !== "PENDING") {
           return existing;
@@ -318,9 +288,7 @@ export class BookingService {
     return this.repository.withDispatchLock(
       bookingId,
       async () => {
-        // Re-read after locking so concurrent callbacks see the latest state.
-        const existing =
-          await this.repository.findById(bookingId);
+        const existing = await this.repository.findById(bookingId);
 
         if (!existing || existing.status !== "PENDING") {
           return existing;
@@ -335,14 +303,8 @@ export class BookingService {
   async updateBookingStatus(
     id: string,
     status: BookingStatus
-  ):
-    Promise<
-      Booking | undefined
-    > {
-
-    const existing =
-      await this.repository
-        .findById(id);
+  ): Promise<Booking | undefined> {
+    const existing = await this.repository.findById(id);
 
     if (!existing) {
       return undefined;
@@ -356,34 +318,22 @@ export class BookingService {
       );
     }
 
-    validateBookingStatusTransition(
-      existing.status,
-      status
-    );
+    validateBookingStatusTransition(existing.status, status);
 
     /*
-     * Confirmed -> Cancelled:
-     * refund a PAID payment before cancelling.
+     * Refund a paid payment before cancelling a confirmed booking.
      */
     if (
       existing.status === "CONFIRMED" &&
       status === "CANCELLED"
     ) {
-      const payment =
-        await getPaymentByBookingId(id);
+      const payment = await getPaymentByBookingId(id);
 
-      if (
-        payment &&
-        payment.status === "PAID"
-      ) {
+      if (payment && payment.status === "PAID") {
         await refundPayment(payment.id);
       }
     }
 
-    /*
-     * Confirmed -> Ongoing:
-     * reserve the driver and vehicle for the active trip.
-     */
     if (
       existing.status === "CONFIRMED" &&
       status === "ONGOING" &&
@@ -396,10 +346,6 @@ export class BookingService {
       );
     }
 
-    /*
-     * Ongoing -> Completed:
-     * release the driver and vehicle.
-     */
     if (
       existing.status === "ONGOING" &&
       status === "COMPLETED" &&
@@ -412,10 +358,6 @@ export class BookingService {
       );
     }
 
-    /*
-     * Confirmed -> Cancelled:
-     * release the driver and vehicle.
-     */
     if (
       existing.status === "CONFIRMED" &&
       status === "CANCELLED" &&
@@ -428,12 +370,23 @@ export class BookingService {
       );
     }
 
-    return this.repository.update(
-      id,
-      {
-        ...existing,
-        status
-      }
-    );
+    const updatedBooking = await this.repository.update(id, {
+      ...existing,
+      status
+    });
+
+    if (
+      updatedBooking &&
+      updatedBooking.status !== existing.status
+    ) {
+      await this.sendNotificationSafely(
+        `Booking-${updatedBooking.status.toLowerCase()}`,
+        updatedBooking.userId,
+        updatedBooking.id,
+        updatedBooking.status
+      );
+    }
+
+    return updatedBooking;
   }
 }
