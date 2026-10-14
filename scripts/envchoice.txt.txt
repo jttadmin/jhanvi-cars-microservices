@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'TARGET_ENV', choices: ['dev', 'qa', 'prod'], description: 'Select the deployment environment')
+    }
+
+    environment {
+        // Define environment variables for Kubernetes context or namespace if needed
+        KUBE_NAMESPACE = "${params.TARGET_ENV == 'prod' ? 'prod-namespace' : params.TARGET_ENV + '-namespace'}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            when {
+                expression { return params.TARGET_ENV == 'prod' }
+            }
+            steps {
+                script {
+                    // Load kubeconfig credentials from Jenkins Credentials Manager
+                    withCredentials([file(credentialsId: "kubeconfig-${params.TARGET_ENV}", variable: 'KUBECONFIG')]) {
+                        // Call shared library function to deploy, passing environment and namespace
+                        deployToEks(env: params.TARGET_ENV, namespace: env.KUBE_NAMESPACE, kubeconfigPath: env.KUBECONFIG)
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment to ${params.TARGET_ENV} environment completed successfully."
+        }
+        failure {
+            echo "Deployment failed."
+        }
+    }
+}

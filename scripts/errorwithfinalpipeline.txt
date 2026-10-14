@@ -1,0 +1,293 @@
+// Jenkinsfile — production-ready pipeline for jhanvi-cars-backend
+// Secrets pulled at runtime from AWS Secrets Manager. Error handling uses:
+//   - try/catch/finally        -> guarantee cleanup (docker logout, temp secret files) runs no matter what
+//   - error("msg")             -> fail the build immediately with a clear, human-readable reason
+//   - catchError()             -> let a stage fail visibly (marks build UNSTABLE/FAILURE) without
+//                                 aborting the rest of the pipeline, so later stages (e.g. rollback) still run
+//   - warnError()               -> best-effort steps (e.g. Slack notify) that should never break the build
+//   - post { failure/unstable } -> pipeline-wide reaction once, regardless of which stage caused it
+//
+// Requires on the agent: aws cli v2, jq, docker, kubectl, gettext (for envsubst)
+//
+// Repo must contain k8s/deployment.yaml with `image: ${IMAGE}` as a placeholder —
+// envsubst fills that in at deploy time. kubectl apply is used instead of
+// `kubectl set image` so this pipeline works identically on a brand-new EKS
+// namespace (first deploy) and on every subsequent update.
+
+pipeline {
+    agent none
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        timeout(time: 60, unit: 'MINUTES')
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        wrap([$class: 'MaskPasswordsBuildWrapper'])
+    }
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['staging', 'prod'], description: 'Target environment')
+        string(name: 'IMAGE_TAG', defaultValue: '', description: 'Override image tag (defaults to git sha)')
+    }
+
+    environment {
+        AWS_REGION      = 'ap-south-2'
+        REGISTRY        = 'docker.io/jhanviadmin'
+        IMAGE_NAME      = 'jhanvi-cars-backend'
+        EKS_CLUSTER     = "jhanvi-cars-${params.DEPLOY_ENV}"
+        NAMESPACE       = 'jhanvi-cars'
+        SECRET_ID       = "jhanvi-cars/${params.DEPLOY_ENV}/backend"
+        DOCKERHUB_CREDS = credentials('dockerhub-creds')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            agent { label 'linux' }
+            steps {
+                script {
+                    try {
+                        checkout scm
+                        env.GIT_SHA_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                        env.RESOLVED_TAG  = params.IMAGE_TAG?.trim() ? params.IMAGE_TAG : env.GIT_SHA_SHORT
+                    } catch (err) {
+                        // Fail fast with a message that actually says what went wrong, not just
+                        // Jenkins' generic "process apparently failed" trace.
+                        error("Checkout failed — check repo URL / credentials / branch: ${err.getMessage()}")
+                    }
+                }
+                stash name: 'source', excludes: 'node_modules/**'
+            }
+        }
+
+        stage('Install & Test') {
+            agent { label 'linux' }
+            steps {
+                unstash 'source'
+                script {
+                    try {
+                        sh 'npm ci'
+                    } catch (err) {
+                        error("npm ci failed — check package-lock.json is committed and in sync: ${err.getMessage()}")
+                    }
+
+                    // Lint failures shouldn't block the whole pipeline, just mark it UNSTABLE
+                    // so the team sees it without a full red build on every style nit.
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                        sh 'npm run lint'
+                    }
+
+                    try {
+                        sh 'npm test -- --ci --reporters=default --reporters=jest-junit'
+                    } catch (err) {
+                        // Tests are a hard gate — real failure, not just unstable.
+                        error("Unit tests failed: ${err.getMessage()}")
+                    } finally {
+                        // Always publish whatever test results exist, pass or fail,
+                        // so a failed run still shows *which* tests broke.
+                        junit allowEmptyResults: true, testResults: 'reports/junit/*.xml'
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Image') {
+            agent { label 'linux && docker' }
+            steps {
+                unstash 'source'
+                script {
+                    try {
+                        retry(2) {
+                            sh "echo \$DOCKERHUB_CREDS_PSW | docker login -u \$DOCKERHUB_CREDS_USR --password-stdin"
+                        }
+
+                        sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${env.RESOLVED_TAG} ."
+
+                        retry(2) {
+                            sh "docker push ${REGISTRY}/${IMAGE_NAME}:${env.RESOLVED_TAG}"
+                        }
+                    } catch (err) {
+                        error("Docker build/push failed for tag ${env.RESOLVED_TAG}: ${err.getMessage()}")
+                    } finally {
+                        // Log out regardless of success/failure so creds don't linger in the
+                        // agent's docker config across builds sharing the same executor.
+                        sh 'docker logout || true'
+                    }
+                }
+            }
+        }
+
+        stage('Approval') {
+            agent none
+            when { expression { params.DEPLOY_ENV == 'prod' } }
+            steps {
+                script {
+                    try {
+                        timeout(time: 15, unit: 'MINUTES') {
+                            input message: "Deploy ${env.RESOLVED_TAG} to PROD?", ok: 'Deploy',
+                                  submitter: 'release-approvers'
+                        }
+                    } catch (err) {
+                        // Distinguish "nobody approved in time" / "someone clicked abort"
+                        // from a real infra failure, so the failure reason is honest.
+                        error("Prod deploy not approved (timed out or aborted): ${err.getMessage()}")
+                    }
+                }
+            }
+        }
+
+        stage('Fetch secrets & Deploy') {
+            agent { label 'linux' }
+            steps {
+                script {
+                    def secretJson
+                    try {
+                        secretJson = sh(
+                            script: """
+                                aws secretsmanager get-secret-value \
+                                  --region ${AWS_REGION} \
+                                  --secret-id '${SECRET_ID}' \
+                                  --query SecretString --output text
+                            """,
+                            returnStdout: true
+                        ).trim()
+                    } catch (err) {
+                        // Most likely IAM permissions or a wrong secret name — say so explicitly
+                        // rather than surfacing a raw AWS CLI stack trace.
+                        error("Could not fetch secret '${SECRET_ID}' from Secrets Manager — check IAM role/permissions: ${err.getMessage()}")
+                    }
+
+                    def secrets
+                    try {
+                        secrets = readJSON text: secretJson
+                    } catch (err) {
+                        error("Secret '${SECRET_ID}' is not valid JSON — check how it was stored in Secrets Manager")
+                    }
+
+                    secrets.each { k, v -> wrap([$class: 'MaskPasswordsBuildWrapper',
+                        varPasswordPairs: [[password: v]]]) }
+
+                    try {
+                        withEnv(secrets.collect { k, v -> "${k}=${v}" }) {
+                            sh "aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}"
+
+                            // Namespace must exist before anything else — first-time-safe (no-op if it's already there).
+                            sh """
+                                kubectl create namespace ${NAMESPACE} \
+                                  --dry-run=client -o yaml | kubectl apply -f -
+                            """
+
+                            sh """
+                                kubectl create secret generic jhanvi-cars-backend-secrets \
+                                  --namespace ${NAMESPACE} \
+                                  --from-literal=DB_HOST="\$DB_HOST" \
+                                  --from-literal=DB_USER="\$DB_USER" \
+                                  --from-literal=DB_PASSWORD="\$DB_PASSWORD" \
+                                  --from-literal=JWT_SECRET="\$JWT_SECRET" \
+                                  --from-literal=GOOGLE_MAPS_API_KEY="\$GOOGLE_MAPS_API_KEY" \
+                                  --dry-run=client -o yaml | kubectl apply -f -
+                            """
+
+                            // Record whether the Deployment already existed *before* this run.
+                            // `kubectl set image` only works on an existing Deployment, and
+                            // `rollout undo` only works if there's a prior revision — neither
+                            // is true on a first-ever deploy, so we branch on this flag below.
+                            env.DEPLOYMENT_PRE_EXISTED = sh(
+                                script: "kubectl get deployment jhanvi-cars-backend --namespace ${NAMESPACE} -o name 2>/dev/null || true",
+                                returnStdout: true
+                            ).trim() ? 'true' : 'false'
+
+                            // kubectl apply is idempotent: creates the Deployment+Service on a
+                            // first-ever run, updates the image on every run after. This replaces
+                            // `kubectl set image`, which would error out with "not found" on a
+                            // brand-new environment.
+                            sh """
+                                export IMAGE=${REGISTRY}/${IMAGE_NAME}:${env.RESOLVED_TAG}
+                                envsubst < k8s/deployment.yaml | kubectl apply -f -
+                            """
+
+                            sh """
+                                kubectl rollout status deployment/jhanvi-cars-backend \
+                                  --namespace ${NAMESPACE} --timeout=180s
+                            """
+                        }
+                    } catch (err) {
+                        echo "Deploy failed, attempting recovery: ${err.getMessage()}"
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                            if (env.DEPLOYMENT_PRE_EXISTED == 'true') {
+                                // Known-good previous revision exists — roll back to it.
+                                sh "kubectl rollout undo deployment/jhanvi-cars-backend --namespace ${NAMESPACE}"
+                            } else {
+                                // First-ever deploy failed: there's nothing to "roll back" to.
+                                // Tear down the broken Deployment/Service so the environment is
+                                // left clean instead of stuck half-created for the next run to trip over.
+                                echo "First-time deploy failed — no prior revision to roll back to. Removing broken resources."
+                                sh "kubectl delete deployment jhanvi-cars-backend --namespace ${NAMESPACE} --ignore-not-found"
+                                sh "kubectl delete service jhanvi-cars-backend --namespace ${NAMESPACE} --ignore-not-found"
+                            }
+                        }
+                        error("Deployment failed (first-time deploy: ${env.DEPLOYMENT_PRE_EXISTED == 'false'}): ${err.getMessage()}")
+                    }
+                }
+            }
+        }
+
+        stage('Smoke test') {
+            agent { label 'linux' }
+            steps {
+                script {
+                    def healthy = false
+                    def lastStatus = 'unknown'
+                    for (int i = 0; i < 6 && !healthy; i++) {
+                        try {
+                            lastStatus = sh(
+                                script: "kubectl run curltest-${env.BUILD_NUMBER} --rm -i --restart=Never --namespace ${NAMESPACE} --image=curlimages/curl -- -s -o /dev/null -w '%{http_code}' http://jhanvi-cars-backend/health",
+                                returnStdout: true
+                            ).trim()
+                            healthy = lastStatus.endsWith('200')
+                        } catch (err) {
+                            // A curl pod failing to even schedule/run is itself informative —
+                            // don't let it silently count as "not healthy yet" forever.
+                            lastStatus = "probe error: ${err.getMessage()}"
+                        }
+                        if (!healthy) sleep(time: 10, unit: 'SECONDS')
+                    }
+
+                    if (!healthy) {
+                        // Same first-deploy-vs-update branch as the Deploy stage: only
+                        // `rollout undo` if there was something to roll back to.
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                            if (env.DEPLOYMENT_PRE_EXISTED == 'true') {
+                                sh "kubectl rollout undo deployment/jhanvi-cars-backend --namespace ${NAMESPACE}"
+                            } else {
+                                echo "First-time deploy failed smoke test — no prior revision to roll back to. Removing broken resources."
+                                sh "kubectl delete deployment jhanvi-cars-backend --namespace ${NAMESPACE} --ignore-not-found"
+                                sh "kubectl delete service jhanvi-cars-backend --namespace ${NAMESPACE} --ignore-not-found"
+                            }
+                        }
+                        error("Post-deploy health check failed (last status: ${lastStatus})")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        unstable {
+            echo "Build completed with warnings (e.g. lint) — check stage logs."
+        }
+        failure {
+            // Best-effort notification: if Slack itself is down, that should never
+            // mask or replace the real pipeline failure reason.
+            warnError(message: 'Failed to send Slack failure notification') {
+                node('linux') {
+                    sh "curl -s -X POST -H 'Content-type: application/json' --data '{\"text\":\"jhanvi-cars-backend pipeline FAILED: ${env.BUILD_URL}\"}' \$SLACK_WEBHOOK_URL || true"
+                }
+            }
+        }
+        always {
+            node('linux') { cleanWs() }
+        }
+    }
+}

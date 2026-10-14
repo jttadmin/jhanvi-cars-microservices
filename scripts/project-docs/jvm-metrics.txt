@@ -1,0 +1,305 @@
+. JVM Metrics
+
+JVM metrics tell you what is happening inside a Java application.
+
+Important JVM metrics
+Metric	What to monitor	Problem indication
+Heap Memory	Used vs Max heap	Memory leak / insufficient heap
+Non-Heap Memory	Metaspace usage	Classloader leak
+GC Count	Number of GC events	Excessive GC
+GC Pause Time	Time application stops	High latency
+Thread Count	Live threads	Thread leak
+CPU Usage	Process CPU	CPU bottleneck
+Class Count	Loaded classes	Metaspace issues
+Example Prometheus metrics
+jvm_memory_used_bytes
+jvm_memory_max_bytes
+jvm_gc_pause_seconds
+jvm_threads_live_threads
+jvm_threads_peak_threads
+process_cpu_usage
+2. Garbage Collection (GC)
+
+Java automatically removes objects that are no longer needed.
+
+6
+JVM Heap Areas
+JVM Heap
+│
+├── Young Generation
+│   ├── Eden
+│   ├── Survivor S0
+│   └── Survivor S1
+│
+└── Old Generation
+Types of GC
+Minor GC
+Cleans Young Generation
+Usually fast
+Happens frequently
+Major GC
+Cleans Old Generation
+More expensive
+Full GC
+Cleans the entire heap
+Can cause Stop-The-World pauses
+High Full GC frequency is a production concern
+Production symptom
+Application latency increases
+        ↓
+GC pauses increase
+        ↓
+CPU may increase
+        ↓
+Requests timeout
+What would you monitor?
+GC frequency
+GC pause duration
+Heap usage
+Old generation utilization
+Full GC count
+
+Interview answer:
+
+If application latency increases, I check GC pause time and Full GC frequency. Frequent long GC pauses can cause Stop-The-World events, making the application unresponsive even when CPU utilization is low.
+
+3. Thread Pools
+
+A thread pool is a group of reusable threads that process tasks.
+
+Incoming Requests
+       │
+       ▼
+   Thread Pool
+ ┌─────────────┐
+ │ Thread 1    │
+ │ Thread 2    │
+ │ Thread 3    │
+ │ Thread 4    │
+ └─────────────┘
+       │
+       ▼
+   Application
+Important metrics
+Metric	Meaning
+Active Threads	Currently processing
+Pool Size	Total threads
+Max Pool Size	Maximum allowed
+Queue Size	Waiting requests
+Completed Tasks	Finished tasks
+Rejected Tasks	Tasks rejected
+Production issue example
+
+Suppose:
+
+Thread Pool Size = 50
+Active Threads = 50
+Queue Size = 1000
+
+This indicates:
+
+🚨 Thread pool saturation
+
+Requests are waiting because all threads are busy.
+
+Common causes
+Slow database queries
+External API latency
+Blocking operations
+Insufficient thread pool size
+Deadlocks
+4. Blocked Threads
+
+A thread can be in different states.
+
+RUNNABLE
+BLOCKED
+WAITING
+TIMED_WAITING
+TERMINATED
+BLOCKED
+
+A thread is waiting to acquire a lock.
+
+Example:
+
+synchronized(lock) {
+    // another thread may hold this lock
+}
+
+If Thread A holds the lock:
+
+Thread A → Holding Lock
+Thread B → BLOCKED
+Thread C → BLOCKED
+Thread D → BLOCKED
+
+This can create application slowness.
+
+How to investigate?
+
+Take a thread dump:
+
+jstack <PID>
+
+Or:
+
+jcmd <PID> Thread.print
+
+Look for:
+
+BLOCKED
+WAITING
+TIMED_WAITING
+Interview scenario
+
+Application CPU is only 30%, but latency is high. What could be happening?
+
+Answer:
+
+CPU may not be the bottleneck. I would check thread pool saturation and thread dumps. Threads could be blocked waiting for database connections, locks, external API responses, or synchronized resources.
+
+5. Connection Pools
+
+Applications usually don't create a new database connection for every request.
+
+Instead:
+
+Application
+     │
+     ▼
+Connection Pool
+ ┌──────────────┐
+ │ Connection 1 │
+ │ Connection 2 │
+ │ Connection 3 │
+ │ Connection 4 │
+ └──────────────┘
+     │
+     ▼
+ Database
+
+Popular Java connection pool:
+
+HikariCP
+Apache DBCP
+C3P0
+Important metrics
+Metric	Meaning
+Active Connections	Currently used
+Idle Connections	Available
+Maximum Connections	Pool limit
+Pending Threads	Waiting for connection
+Connection Timeout	Waiting too long
+Example problem
+Maximum Connections = 20
+Active Connections = 20
+Idle Connections = 0
+Pending Requests = 100
+
+🚨 Database connection pool exhaustion.
+
+Application threads are waiting for database connections.
+
+This leads to:
+
+Slow DB
+   ↓
+Connections remain busy
+   ↓
+Pool exhausted
+   ↓
+Application threads wait
+   ↓
+Thread pool gets blocked
+   ↓
+Request queue increases
+   ↓
+Latency increases
+Complete Production Troubleshooting Flow
+
+This is a strong Senior DevOps/SRE interview answer:
+
+Application Slow
+       │
+       ▼
+Check RED Metrics
+(Rate, Errors, Duration)
+       │
+       ▼
+Check JVM Metrics
+(Heap, GC, CPU, Threads)
+       │
+       ├── High GC Pause?
+       │      → Investigate Heap / Memory
+       │
+       ├── High Thread Count?
+       │      → Check Thread Dump
+       │
+       ├── Thread Pool Full?
+       │      → Check Queue / Active Threads
+       │
+       └── CPU Normal but Latency High?
+              │
+              ▼
+       Check Blocked Threads
+              │
+              ▼
+       Check Connection Pool
+              │
+              ▼
+       Check Database Queries
+              │
+              ▼
+       Check External Dependencies
+Key interview connection
+
+CPU at 30% does NOT mean the application is healthy.
+
+The bottleneck may be:
+
+JVM Garbage Collection pauses
+Thread pool exhaustion
+Blocked threads / lock contention
+Database connection pool exhaustion
+Slow SQL queries
+External API latency
+
+For a Senior DevOps Engineer interview, you should be able to explain how all five components connect together in a real production incident.
+
+For JVM thread and connection pool metrics, here’s one workflow orchestration option.
+Ad
+give me a pdf to download this
+
+Data analysis isn't available right now. Do you want to continue without it? 
+
+Ad
+Ads do not influence the answers you get from ChatGPT. Your chats stay private. 
+Learn about ads and personalization
+JVM metrics, garbage collection, thread pools, blocked threads, and connection pools    information provide me in pdf
+
+Data analysis isn't available right now. Do you want to continue without it?
+
+yes
+
+Yes. I can prepare the PDF, but the file-generation tool is currently unavailable in this chat, so I can’t create a downloadable PDF right now.
+
+I can instead give you the complete, PDF-ready content here, covering:
+
+JVM metrics
+Heap & non-heap memory
+Garbage Collection
+Minor/Major/Full GC
+Stop-the-world pauses
+Thread pools
+Thread states
+Blocked/waiting threads
+Thread dumps (jstack, jcmd)
+Database connection pools
+HikariCP metrics
+Pool exhaustion
+Production troubleshooting flow
+Senior DevOps/SRE interview scenarios
+Prometheus/Grafana metrics and commands
+
+When file generation is available again, I can turn this into a properly formatted downloadable PDF.
