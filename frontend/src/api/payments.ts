@@ -10,9 +10,10 @@ export interface Payment {
   transactionId?: string | null;
 }
 
+/** Response of POST /payments/:id/razorpay-order (payment-service). */
 export interface RazorpayOrder {
   paymentId: string;
-  orderId: string;
+  razorpayOrderId: string;
   amount: number;
   currency: string;
   keyId: string;
