@@ -1,0 +1,315 @@
+name: CI/CD
+
+# Builds Docker images for the services that changed, pushes them to Docker Hub,
+# and deploys them to the kubeadm cluster with Helm from a self-hosted runner.
+#
+#   pull_request  -> build images only (no push, no deploy)
+#   push to main  -> build + push changed services, then deploy them
+#   manual run    -> choose "changed" or "all" services
+#
+# Setup (secrets, variables, runner): see docs/ci-cd.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'helm/**'
+      - '.github/workflows/ci-cd.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'helm/**'
+      - '.github/workflows/ci-cd.yml'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: Which services to build and deploy
+        type: choice
+        options: [changed, all]
+        default: changed
+
+permissions:
+  contents: read
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'jhanviadmin' }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Work out which services changed
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+      helm: ${{ steps.filter.outputs.helm }}
+      image_tag: ${{ steps.plan.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api-gateway: ['backend/api-gateway/**']
+            auth-service: ['backend/auth-service/**']
+            user-service: ['backend/user-service/**']
+            driver-service: ['backend/driver-service/**']
+            booking-service: ['backend/booking-service/**']
+            vehicle-service: ['backend/vehicle-service/**']
+            payment-service: ['backend/payment-service/**']
+            notification-service: ['backend/notification-service/**']
+            frontend: ['frontend/**']
+            helm: ['helm/**']
+
+      - name: Build the service matrix
+        id: plan
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+          MODE: ${{ github.event.inputs.services || 'changed' }}
+        run: |
+          python3 - <<'EOF'
+          import json, os
+
+          # dir | path | Helm image key | Helm migration key | Deployment name
+          services = [
+              ("api-gateway",          "backend/api-gateway",          "apiGateway",          None,           "api-gateway"),
+              ("auth-service",         "backend/auth-service",         "authService",         "auth",         "auth"),
+              ("user-service",         "backend/user-service",         "userService",         "user",         "user"),
+              ("driver-service",       "backend/driver-service",       "driverService",       "driver",       "driver"),
+              ("booking-service",      "backend/booking-service",      "bookingService",      "booking",      "booking"),
+              ("vehicle-service",      "backend/vehicle-service",      "vehicleService",      "vehicle",      "vehicle"),
+              ("payment-service",      "backend/payment-service",      "paymentService",      "payment",      "payment"),
+              ("notification-service", "backend/notification-service", "notificationService", "notification", "notification"),
+              ("frontend",             "frontend",                     "frontend",            None,           "frontend"),
+          ]
+
+          changed = set(json.loads(os.environ["CHANGES"] or "[]"))
+          pick_all = os.environ["MODE"] == "all"
+
+          include = [
+              {
+                  "name": name,
+                  "context": path,
+                  "valuesKey": key,
+                  "migrationKey": mig or "",
+                  "deployment": dep,
+              }
+              for name, path, key, mig, dep in services
+              if pick_all or name in changed
+          ]
+
+          sha = os.environ["GITHUB_SHA"][:7]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"matrix={json.dumps({'include': include})}\n")
+              out.write(f"any={'true' if include else 'false'}\n")
+              out.write(f"image_tag=sha-{sha}\n")
+
+          print("Services:", [s["name"] for s in include] or "none")
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # 2. Build (and on main, push) one image per changed service
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' }}
+      IMAGE: ${{ vars.DOCKERHUB_NAMESPACE || 'jhanviadmin' }}/jhanvi-cars-${{ matrix.name }}
+      TAG: ${{ needs.changes.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Write frontend build env
+        if: matrix.name == 'frontend'
+        env:
+          FRONTEND_ENV: ${{ secrets.FRONTEND_ENV }}
+        run: |
+          if [ -z "$FRONTEND_ENV" ] && [ "$PUSH" = "true" ]; then
+            echo "::error::FRONTEND_ENV secret is empty — the frontend would ship without a Google Maps key."
+            exit 1
+          fi
+          printf '%s\n' "${FRONTEND_ENV:-VITE_GOOGLE_MAPS_API_KEY=ci-placeholder}" > "$RUNNER_TEMP/frontend.env"
+
+      - name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }} app image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.TAG }}
+            ${{ env.IMAGE }}:latest
+          secret-files: ${{ matrix.name == 'frontend' && format('frontend_env={0}/frontend.env', runner.temp) || '' }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      - name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }} migration image
+        if: matrix.migrationKey != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile.migration
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.IMAGE }}-migration:${{ env.TAG }}
+            ${{ env.IMAGE }}-migration:latest
+          cache-from: type=gha,scope=${{ matrix.name }}-migration
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}-migration
+
+  # ---------------------------------------------------------------------------
+  # 3. Deploy to the kubeadm cluster from the self-hosted runner
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to kubeadm cluster
+    needs: [changes, build]
+    # Never run on pull requests: the self-hosted runner has cluster access.
+    if: >-
+      !cancelled() &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.changes.outputs.any == 'true' || needs.changes.outputs.helm == 'true')
+    runs-on: [self-hosted, linux, jhanvi-k8s]
+    environment:
+      name: production
+      url: https://jhanvicars.in
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      MATRIX: ${{ needs.changes.outputs.matrix }}
+      TAG: ${{ needs.changes.outputs.image_tag }}
+      CHART: ./helm/jhanvi-cars
+      HELM_RELEASE: ${{ vars.HELM_RELEASE }}
+      HELM_NAMESPACE: ${{ vars.HELM_NAMESPACE }}
+      APP_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'jhanvi-cars' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check cluster access
+        run: |
+          kubectl version
+          kubectl get nodes -o wide
+          helm version --short
+
+      - name: Find the Helm release
+        id: release
+        run: |
+          if [ -z "$HELM_RELEASE" ] || [ -z "$HELM_NAMESPACE" ]; then
+            found=$(helm list -A -o json | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin) if x["chart"].startswith("jhanvi-cars-")]; print(r[0]["name"], r[0]["namespace"]) if r else print("")')
+            HELM_RELEASE=${HELM_RELEASE:-${found% *}}
+            HELM_NAMESPACE=${HELM_NAMESPACE:-${found#* }}
+          fi
+          if [ -z "$HELM_RELEASE" ]; then
+            echo "::error::No jhanvi-cars Helm release found. Set the HELM_RELEASE and HELM_NAMESPACE repository variables."
+            exit 1
+          fi
+          echo "release=$HELM_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "namespace=$HELM_NAMESPACE" >> "$GITHUB_OUTPUT"
+          echo "Deploying release '$HELM_RELEASE' (stored in namespace '$HELM_NAMESPACE')"
+
+      - name: Prepare image overrides
+        id: overrides
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          ns = os.environ.get("DOCKERHUB_NAMESPACE", "jhanviadmin")
+          tag = os.environ["TAG"]
+          services = json.loads(os.environ["MATRIX"])["include"]
+
+          sets, jobs, deployments = [], [], []
+          for s in services:
+              sets.append(f"images.{s['valuesKey']}.repository={ns}/jhanvi-cars-{s['name']}")
+              sets.append(f"images.{s['valuesKey']}.tag={tag}")
+              deployments.append(s["deployment"])
+              if s["migrationKey"]:
+                  k = s["migrationKey"]
+                  sets.append(f"images.migrations.{k}.repository={ns}/jhanvi-cars-{s['name']}-migration")
+                  sets.append(f"images.migrations.{k}.tag={tag}")
+                  jobs.append(f"{k}-migration")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"set_args={' '.join('--set ' + x for x in sets)}\n")
+              out.write(f"jobs={' '.join(jobs)}\n")
+              out.write(f"deployments={' '.join(deployments)}\n")
+          EOF
+
+      - name: Remove old migration jobs
+        if: steps.overrides.outputs.jobs != ''
+        # A Job's pod template can't be changed in place; Helm recreates them in the next step.
+        run: |
+          for job in ${{ steps.overrides.outputs.jobs }}; do
+            kubectl delete job "$job" -n "$APP_NAMESPACE" --ignore-not-found --wait=true
+          done
+
+      - name: Helm upgrade
+        env:
+          RELEASE: ${{ steps.release.outputs.release }}
+          RELEASE_NS: ${{ steps.release.outputs.namespace }}
+        run: |
+          # Keep tags that earlier runs set for services that did not change this time.
+          if helm upgrade --help | grep -q -- '--reset-then-reuse-values'; then
+            REUSE=--reset-then-reuse-values
+          else
+            REUSE=--reuse-values
+          fi
+
+          helm upgrade "$RELEASE" "$CHART" \
+            --namespace "$RELEASE_NS" \
+            $REUSE \
+            ${{ steps.overrides.outputs.set_args }} \
+            --atomic \
+            --timeout 10m \
+            --history-max 10
+
+      - name: Wait for migrations
+        if: steps.overrides.outputs.jobs != ''
+        run: |
+          for job in ${{ steps.overrides.outputs.jobs }}; do
+            echo "Waiting for $job…"
+            if ! kubectl wait --for=condition=complete "job/$job" -n "$APP_NAMESPACE" --timeout=5m; then
+              kubectl logs "job/$job" -n "$APP_NAMESPACE" --all-containers --tail=100 || true
+              exit 1
+            fi
+          done
+
+      - name: Verify rollouts
+        if: steps.overrides.outputs.deployments != ''
+        run: |
+          for d in ${{ steps.overrides.outputs.deployments }}; do
+            kubectl rollout status "deployment/$d" -n "$APP_NAMESPACE" --timeout=5m
+          done
+          kubectl get pods -n "$APP_NAMESPACE" -o wide
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy ${{ job.status }}"
+            echo ""
+            echo "- Image tag: \`$TAG\`"
+            echo "- Services: \`${{ steps.overrides.outputs.deployments || 'none (chart change only)' }}\`"
+            echo "- Release: \`${{ steps.release.outputs.release }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
