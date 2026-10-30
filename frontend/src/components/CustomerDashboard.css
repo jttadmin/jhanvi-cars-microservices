@@ -665,8 +665,8 @@
 .ride-option-icon {
   display: grid;
   place-items: center;
-  width: 84px;
-  height: 56px;
+  width: 96px;
+  height: 64px;
   flex-shrink: 0;
   perspective: 420px;            /* gives the vehicle real 3D depth when it turns */
 }
@@ -1466,8 +1466,8 @@
   }
 
   .ride-option-icon {
-    width: 64px;
-    height: 44px;
+    width: 80px;
+    height: 54px;
   }
 
   .profile-overlay {

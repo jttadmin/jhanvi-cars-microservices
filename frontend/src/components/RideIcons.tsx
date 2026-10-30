@@ -1,10 +1,10 @@
 import type { RideType } from '../utils/fare';
 
 const vehicleImages: Record<RideType, string> = {
-  AUTO: '/vehicles/auto-photo3d.webp',
-  ECONOMY: '/vehicles/economy-photo3d.webp',
-  COMFORT: '/vehicles/comfort-photo3d.webp',
-  COMFORT_PLUS: '/vehicles/comfort-plus-photo3d.webp',
+  AUTO: '/vehicles/auto-podium.webp',
+  ECONOMY: '/vehicles/economy-podium.webp',
+  COMFORT: '/vehicles/comfort-podium.webp',
+  COMFORT_PLUS: '/vehicles/comfort-plus-podium.webp',
 };
 
 export function RideIcon({ type }: { type: RideType }) {

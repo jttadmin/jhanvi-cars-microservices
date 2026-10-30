@@ -85,10 +85,10 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
         </div>
 
         <div className="auth-vehicle-strip" aria-hidden="true">
-          <img src="/vehicles/auto-photo3d.webp" alt="" />
-          <img src="/vehicles/economy-photo3d.webp" alt="" />
-          <img src="/vehicles/comfort-photo3d.webp" alt="" />
-          <img src="/vehicles/comfort-plus-photo3d.webp" alt="" />
+          <img src="/vehicles/auto-podium.webp" alt="" />
+          <img src="/vehicles/economy-podium.webp" alt="" />
+          <img src="/vehicles/comfort-podium.webp" alt="" />
+          <img src="/vehicles/comfort-plus-podium.webp" alt="" />
         </div>
       </aside>
 
