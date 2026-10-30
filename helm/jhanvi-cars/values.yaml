@@ -4,62 +4,62 @@ global:
 images:
   apiGateway:
     repository: jhanviadmin/jhanvi-cars-api-gateway
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   authService:
     repository: jhanviadmin/jhanvi-cars-auth-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   userService:
     repository: jhanviadmin/jhanvi-cars-user-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   driverService:
     repository: jhanviadmin/jhanvi-cars-driver-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   bookingService:
     repository: jhanviadmin/jhanvi-cars-booking-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   vehicleService:
     repository: jhanviadmin/jhanvi-cars-vehicle-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   paymentService:
     repository: jhanviadmin/jhanvi-cars-payment-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   notificationService:
     repository: jhanviadmin/jhanvi-cars-notification-service
-    tag: "1.0"
+    tag: "20261014-a8595aa"
 
   frontend:
     repository: jhanviadmin/jhanvi-cars-frontend
-    tag: latest
+    tag: "20261015-admin-maps-fix"
 
   migrations:
     auth:
       repository: jhanviadmin/jhanvi-cars-auth-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     user:
       repository: jhanviadmin/jhanvi-cars-user-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     driver:
       repository: jhanviadmin/jhanvi-cars-driver-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     booking:
       repository: jhanviadmin/jhanvi-cars-booking-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     vehicle:
       repository: jhanviadmin/jhanvi-cars-vehicle-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     payment:
       repository: jhanviadmin/jhanvi-cars-payment-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
     notification:
       repository: jhanviadmin/jhanvi-cars-notification-service-migration
-      tag: "1.0"
+      tag: "20261014-a8595aa"
 
 
 services:

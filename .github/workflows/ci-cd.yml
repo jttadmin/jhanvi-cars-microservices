@@ -1,0 +1,246 @@
+name: CI/CD
+
+# GitOps flow — everything runs on GitHub-hosted runners:
+#
+#   pull_request  -> build images of changed services (no push)
+#   push to main  -> build + push changed services to Docker Hub, then commit the
+#                    new image tags to helm/jhanvi-cars/values.yaml
+#   manual run    -> same, for "changed" or "all" services
+#
+# Argo CD (running in the cluster) watches helm/jhanvi-cars on main and deploys.
+# Setup: see docs/ci-cd.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/ci-cd.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/ci-cd.yml'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: Which services to build and deploy
+        type: choice
+        options: [changed, all]
+        default: changed
+
+permissions:
+  contents: read
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'jhanviadmin' }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Work out which services changed
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      any: ${{ steps.plan.outputs.any }}
+      image_tag: ${{ steps.plan.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api-gateway: ['backend/api-gateway/**']
+            auth-service: ['backend/auth-service/**']
+            user-service: ['backend/user-service/**']
+            driver-service: ['backend/driver-service/**']
+            booking-service: ['backend/booking-service/**']
+            vehicle-service: ['backend/vehicle-service/**']
+            payment-service: ['backend/payment-service/**']
+            notification-service: ['backend/notification-service/**']
+            frontend: ['frontend/**']
+
+      - name: Build the service matrix
+        id: plan
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+          MODE: ${{ github.event.inputs.services || 'changed' }}
+        run: |
+          python3 - <<'EOF'
+          import json, os
+
+          # dir | path | Helm image key | Helm migration key | Deployment name
+          services = [
+              ("api-gateway",          "backend/api-gateway",          "apiGateway",          None,           "api-gateway"),
+              ("auth-service",         "backend/auth-service",         "authService",         "auth",         "auth"),
+              ("user-service",         "backend/user-service",         "userService",         "user",         "user"),
+              ("driver-service",       "backend/driver-service",       "driverService",       "driver",       "driver"),
+              ("booking-service",      "backend/booking-service",      "bookingService",      "booking",      "booking"),
+              ("vehicle-service",      "backend/vehicle-service",      "vehicleService",      "vehicle",      "vehicle"),
+              ("payment-service",      "backend/payment-service",      "paymentService",      "payment",      "payment"),
+              ("notification-service", "backend/notification-service", "notificationService", "notification", "notification"),
+              ("frontend",             "frontend",                     "frontend",            None,           "frontend"),
+          ]
+
+          changed = set(json.loads(os.environ["CHANGES"] or "[]"))
+          pick_all = os.environ["MODE"] == "all"
+
+          include = [
+              {
+                  "name": name,
+                  "context": path,
+                  "valuesKey": key,
+                  "migrationKey": mig or "",
+                  "deployment": dep,
+              }
+              for name, path, key, mig, dep in services
+              if pick_all or name in changed
+          ]
+
+          sha = os.environ["GITHUB_SHA"][:7]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"matrix={json.dumps({'include': include})}\n")
+              out.write(f"any={'true' if include else 'false'}\n")
+              out.write(f"image_tag=sha-{sha}\n")
+
+          print("Services:", [s["name"] for s in include] or "none")
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # 2. Build (and on main, push) one image per changed service
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' }}
+      IMAGE: ${{ vars.DOCKERHUB_NAMESPACE || 'jhanviadmin' }}/jhanvi-cars-${{ matrix.name }}
+      TAG: ${{ needs.changes.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Write frontend build env
+        if: matrix.name == 'frontend'
+        env:
+          FRONTEND_ENV: ${{ secrets.FRONTEND_ENV }}
+        run: |
+          if [ -z "$FRONTEND_ENV" ] && [ "$PUSH" = "true" ]; then
+            echo "::error::FRONTEND_ENV secret is empty — the frontend would ship without a Google Maps key."
+            exit 1
+          fi
+          printf '%s\n' "${FRONTEND_ENV:-VITE_GOOGLE_MAPS_API_KEY=ci-placeholder}" > "$RUNNER_TEMP/frontend.env"
+
+      - name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }} app image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.TAG }}
+            ${{ env.IMAGE }}:latest
+          secret-files: ${{ matrix.name == 'frontend' && format('frontend_env={0}/frontend.env', runner.temp) || '' }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      - name: Build${{ github.event_name != 'pull_request' && ' and push' || '' }} migration image
+        if: matrix.migrationKey != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile.migration
+          push: ${{ env.PUSH == 'true' }}
+          tags: |
+            ${{ env.IMAGE }}-migration:${{ env.TAG }}
+            ${{ env.IMAGE }}-migration:latest
+          cache-from: type=gha,scope=${{ matrix.name }}-migration
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}-migration
+
+  # ---------------------------------------------------------------------------
+  # 3. Commit the new image tags — Argo CD picks them up and deploys
+  # ---------------------------------------------------------------------------
+  release:
+    name: Update image tags for Argo CD
+    needs: [changes, build]
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.any == 'true' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    env:
+      MATRIX: ${{ needs.changes.outputs.matrix }}
+      TAG: ${{ needs.changes.outputs.image_tag }}
+      VALUES: helm/jhanvi-cars/values.yaml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set image tags in values.yaml
+        id: tags
+        run: |
+          paths=$(echo "$MATRIX" | jq -r '.include[] | "images.\(.valuesKey)", (select(.migrationKey != "") | "images.migrations.\(.migrationKey)")')
+          services=$(echo "$MATRIX" | jq -r '[.include[].name] | join(" ")')
+
+          python3 .github/scripts/set-image-tag.py "$VALUES" "$TAG" $paths
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          git --no-pager diff -- "$VALUES"
+
+      - name: Commit and push
+        env:
+          SERVICES: ${{ steps.tags.outputs.services }}
+        run: |
+          if git diff --quiet -- "$VALUES"; then
+            echo "Tags already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES"
+          # [skip ci] stops this commit from triggering the workflow again.
+          git commit -m "deploy: ${SERVICES} -> ${TAG} [skip ci]"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "main moved on — rebasing and retrying ($attempt)…"
+            git pull --rebase origin main
+          done
+          echo "::error::Could not push the image-tag commit to main."
+          exit 1
+
+      - name: Summary
+        run: |
+          {
+            echo "### Released \`$TAG\`"
+            echo ""
+            echo "Services: \`${{ steps.tags.outputs.services }}\`"
+            echo ""
+            echo "Argo CD will sync the new tags to the cluster (usually within 3 minutes)."
+          } >> "$GITHUB_STEP_SUMMARY"

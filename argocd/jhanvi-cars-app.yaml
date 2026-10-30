@@ -1,0 +1,52 @@
+# Argo CD Application for Jhanvi Cars.
+#
+# Argo CD watches helm/jhanvi-cars on main and keeps the cluster in sync with it.
+# GitHub Actions only builds images and commits new image tags to values.yaml.
+#
+#   kubectl apply -f argocd/jhanvi-cars-app.yaml
+#
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jhanvi-cars
+  namespace: argocd
+  finalizers:
+    # Deleting this Application does NOT delete the running app (safer for Postgres).
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/jttadmin/jhanvi-cars-microservices.git
+    targetRevision: main
+    path: helm/jhanvi-cars
+    helm:
+      # Keep the same release name as the existing `helm install`, so resource
+      # labels (app.kubernetes.io/instance) don't change when Argo CD takes over.
+      releaseName: jhanvi-cars
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jhanvi-cars
+
+  syncPolicy:
+    automated:
+      # Revert manual kubectl edits back to what Git says.
+      selfHeal: true
+      # Don't auto-delete resources that disappear from the chart (protects Postgres).
+      # Turn on once you're comfortable with the setup.
+      prune: false
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+
+  # The Secret jhanvi-cars-secrets is created by hand on the cluster and is not in Git,
+  # so Argo CD leaves it alone.
