@@ -1,13 +1,14 @@
 name: CI/CD
 
-# Builds Docker images for the services that changed, pushes them to Docker Hub,
-# and deploys them to the kubeadm cluster with Helm from a self-hosted runner.
+# GitOps flow — everything runs on GitHub-hosted runners:
 #
-#   pull_request  -> build images only (no push, no deploy)
-#   push to main  -> build + push changed services, then deploy them
-#   manual run    -> choose "changed" or "all" services
+#   pull_request  -> build images of changed services (no push)
+#   push to main  -> build + push changed services to Docker Hub, then commit the
+#                    new image tags to helm/jhanvi-cars/values.yaml
+#   manual run    -> same, for "changed" or "all" services
 #
-# Setup (secrets, variables, runner): see docs/ci-cd.md
+# Argo CD (running in the cluster) watches helm/jhanvi-cars on main and deploys.
+# Setup: see docs/ci-cd.md
 
 on:
   push:
@@ -15,14 +16,12 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - 'helm/**'
       - '.github/workflows/ci-cd.yml'
   pull_request:
     branches: [main]
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - 'helm/**'
       - '.github/workflows/ci-cd.yml'
   workflow_dispatch:
     inputs:
@@ -48,7 +47,6 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       any: ${{ steps.plan.outputs.any }}
-      helm: ${{ steps.filter.outputs.helm }}
       image_tag: ${{ steps.plan.outputs.image_tag }}
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +64,6 @@ jobs:
             payment-service: ['backend/payment-service/**']
             notification-service: ['backend/notification-service/**']
             frontend: ['frontend/**']
-            helm: ['helm/**']
 
       - name: Build the service matrix
         id: plan
@@ -178,138 +175,72 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}-migration
 
   # ---------------------------------------------------------------------------
-  # 3. Deploy to the kubeadm cluster from the self-hosted runner
+  # 3. Commit the new image tags — Argo CD picks them up and deploys
   # ---------------------------------------------------------------------------
-  deploy:
-    name: Deploy to kubeadm cluster
+  release:
+    name: Update image tags for Argo CD
     needs: [changes, build]
-    # Never run on pull requests: the self-hosted runner has cluster access.
     if: >-
-      !cancelled() &&
       github.event_name != 'pull_request' &&
       github.ref == 'refs/heads/main' &&
-      needs.changes.result == 'success' &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.changes.outputs.any == 'true' || needs.changes.outputs.helm == 'true')
-    runs-on: [self-hosted, linux, jhanvi-k8s]
-    environment:
-      name: production
-      url: https://jhanvicars.in
+      needs.changes.outputs.any == 'true' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     concurrency:
-      group: deploy-production
+      group: release-main
       cancel-in-progress: false
     env:
       MATRIX: ${{ needs.changes.outputs.matrix }}
       TAG: ${{ needs.changes.outputs.image_tag }}
-      CHART: ./helm/jhanvi-cars
-      HELM_RELEASE: ${{ vars.HELM_RELEASE }}
-      HELM_NAMESPACE: ${{ vars.HELM_NAMESPACE }}
-      APP_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'jhanvi-cars' }}
+      VALUES: helm/jhanvi-cars/values.yaml
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Check cluster access
+      - name: Set image tags in values.yaml
+        id: tags
         run: |
-          kubectl version
-          kubectl get nodes -o wide
-          helm version --short
+          paths=$(echo "$MATRIX" | jq -r '.include[] | "images.\(.valuesKey)", (select(.migrationKey != "") | "images.migrations.\(.migrationKey)")')
+          services=$(echo "$MATRIX" | jq -r '[.include[].name] | join(" ")')
 
-      - name: Find the Helm release
-        id: release
-        run: |
-          if [ -z "$HELM_RELEASE" ] || [ -z "$HELM_NAMESPACE" ]; then
-            found=$(helm list -A -o json | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin) if x["chart"].startswith("jhanvi-cars-")]; print(r[0]["name"], r[0]["namespace"]) if r else print("")')
-            HELM_RELEASE=${HELM_RELEASE:-${found% *}}
-            HELM_NAMESPACE=${HELM_NAMESPACE:-${found#* }}
-          fi
-          if [ -z "$HELM_RELEASE" ]; then
-            echo "::error::No jhanvi-cars Helm release found. Set the HELM_RELEASE and HELM_NAMESPACE repository variables."
-            exit 1
-          fi
-          echo "release=$HELM_RELEASE" >> "$GITHUB_OUTPUT"
-          echo "namespace=$HELM_NAMESPACE" >> "$GITHUB_OUTPUT"
-          echo "Deploying release '$HELM_RELEASE' (stored in namespace '$HELM_NAMESPACE')"
+          python3 .github/scripts/set-image-tag.py "$VALUES" "$TAG" $paths
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          git --no-pager diff -- "$VALUES"
 
-      - name: Prepare image overrides
-        id: overrides
-        run: |
-          python3 - <<'EOF'
-          import json, os
-          ns = os.environ.get("DOCKERHUB_NAMESPACE", "jhanviadmin")
-          tag = os.environ["TAG"]
-          services = json.loads(os.environ["MATRIX"])["include"]
-
-          sets, jobs, deployments = [], [], []
-          for s in services:
-              sets.append(f"images.{s['valuesKey']}.repository={ns}/jhanvi-cars-{s['name']}")
-              sets.append(f"images.{s['valuesKey']}.tag={tag}")
-              deployments.append(s["deployment"])
-              if s["migrationKey"]:
-                  k = s["migrationKey"]
-                  sets.append(f"images.migrations.{k}.repository={ns}/jhanvi-cars-{s['name']}-migration")
-                  sets.append(f"images.migrations.{k}.tag={tag}")
-                  jobs.append(f"{k}-migration")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"set_args={' '.join('--set ' + x for x in sets)}\n")
-              out.write(f"jobs={' '.join(jobs)}\n")
-              out.write(f"deployments={' '.join(deployments)}\n")
-          EOF
-
-      - name: Remove old migration jobs
-        if: steps.overrides.outputs.jobs != ''
-        # A Job's pod template can't be changed in place; Helm recreates them in the next step.
-        run: |
-          for job in ${{ steps.overrides.outputs.jobs }}; do
-            kubectl delete job "$job" -n "$APP_NAMESPACE" --ignore-not-found --wait=true
-          done
-
-      - name: Helm upgrade
+      - name: Commit and push
         env:
-          RELEASE: ${{ steps.release.outputs.release }}
-          RELEASE_NS: ${{ steps.release.outputs.namespace }}
+          SERVICES: ${{ steps.tags.outputs.services }}
         run: |
-          # Keep tags that earlier runs set for services that did not change this time.
-          if helm upgrade --help | grep -q -- '--reset-then-reuse-values'; then
-            REUSE=--reset-then-reuse-values
-          else
-            REUSE=--reuse-values
+          if git diff --quiet -- "$VALUES"; then
+            echo "Tags already up to date."
+            exit 0
           fi
 
-          helm upgrade "$RELEASE" "$CHART" \
-            --namespace "$RELEASE_NS" \
-            $REUSE \
-            ${{ steps.overrides.outputs.set_args }} \
-            --atomic \
-            --timeout 10m \
-            --history-max 10
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES"
+          # [skip ci] stops this commit from triggering the workflow again.
+          git commit -m "deploy: ${SERVICES} -> ${TAG} [skip ci]"
 
-      - name: Wait for migrations
-        if: steps.overrides.outputs.jobs != ''
-        run: |
-          for job in ${{ steps.overrides.outputs.jobs }}; do
-            echo "Waiting for $job…"
-            if ! kubectl wait --for=condition=complete "job/$job" -n "$APP_NAMESPACE" --timeout=5m; then
-              kubectl logs "job/$job" -n "$APP_NAMESPACE" --all-containers --tail=100 || true
-              exit 1
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
             fi
+            echo "main moved on — rebasing and retrying ($attempt)…"
+            git pull --rebase origin main
           done
-
-      - name: Verify rollouts
-        if: steps.overrides.outputs.deployments != ''
-        run: |
-          for d in ${{ steps.overrides.outputs.deployments }}; do
-            kubectl rollout status "deployment/$d" -n "$APP_NAMESPACE" --timeout=5m
-          done
-          kubectl get pods -n "$APP_NAMESPACE" -o wide
+          echo "::error::Could not push the image-tag commit to main."
+          exit 1
 
       - name: Summary
-        if: always()
         run: |
           {
-            echo "### Deploy ${{ job.status }}"
+            echo "### Released \`$TAG\`"
             echo ""
-            echo "- Image tag: \`$TAG\`"
-            echo "- Services: \`${{ steps.overrides.outputs.deployments || 'none (chart change only)' }}\`"
-            echo "- Release: \`${{ steps.release.outputs.release }}\`"
+            echo "Services: \`${{ steps.tags.outputs.services }}\`"
+            echo ""
+            echo "Argo CD will sync the new tags to the cluster (usually within 3 minutes)."
           } >> "$GITHUB_STEP_SUMMARY"

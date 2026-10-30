@@ -15,6 +15,13 @@ metadata:
   labels:
     {{- include "jhanvi-cars.labels" $root | nindent 4 }}
     app: {{ $name | kebabcase }}-migration
+  annotations:
+    # Argo CD: run as a sync hook on every sync. The old Job is deleted first,
+    # so a new image tag never hits the "Job spec is immutable" error.
+    # Plain `helm install/upgrade` ignores these annotations.
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
 
 spec:
   backoffLimit: 4

@@ -24,6 +24,9 @@ metadata:
   labels:
     {{- include "jhanvi-cars.labels" $root | nindent 4 }}
     app: {{ $name | kebabcase }}
+  annotations:
+    # Argo CD: roll out after the migration Jobs (wave 1) have completed
+    argocd.argoproj.io/sync-wave: "2"
 
 spec:
   replicas: {{ $service.replicas }}

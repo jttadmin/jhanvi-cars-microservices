@@ -8,6 +8,8 @@ metadata:
   labels:
     {{- include "jhanvi-cars.labels" . | nindent 4 }}
     app: frontend
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 
 spec:
   replicas: 1
