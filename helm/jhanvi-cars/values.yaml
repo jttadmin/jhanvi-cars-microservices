@@ -36,7 +36,7 @@ images:
 
   frontend:
     repository: jhanviadmin/jhanvi-cars-frontend
-    tag: "sha-be5aca7"
+    tag: "sha-b8af143"
 
   migrations:
     auth:
