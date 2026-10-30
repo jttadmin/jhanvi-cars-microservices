@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" role="img" aria-label="Comfort Plus SUV">
+  <!-- Original artwork for Jhanvi Cars. Generated, not traced from any photo or brand. -->
+  <defs>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#000" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#626b75"/>
+      <stop offset=".38" stop-color="#2b3138"/>
+      <stop offset=".62" stop-color="#171b20"/>
+      <stop offset="1" stop-color="#050608"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5a6674"/>
+      <stop offset=".55" stop-color="#222a33"/>
+      <stop offset="1" stop-color="#0b0f13"/>
+    </linearGradient>
+    <radialGradient id="tire" cx="50%" cy="45%" r="55%">
+      <stop offset=".6" stop-color="#2b2b2b"/>
+      <stop offset="1" stop-color="#0b0b0b"/>
+    </radialGradient>
+    <radialGradient id="rim" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".5" stop-color="#c3c9cf"/>
+      <stop offset="1" stop-color="#6c747c"/>
+    </radialGradient>
+    <linearGradient id="lamp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff7d6"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="168" cy="168" rx="134" ry="13" fill="url(#shadow)"/>
+  <path d="M36 134 L36 104 C36 94 42 88 52 86 L72 84 C82 60 94 50 118 50 L206 50 C222 50 234 58 248 80 L280 88 C294 91 300 102 300 116 L300 134 C300 140 296 144 290 144 L46 144 C40 144 36 140 36 134 Z" fill="url(#body)" stroke="#ffffff" stroke-opacity=".12"/>
+  <path d="M104 45 L216 45" stroke="#0a0c0e" stroke-width="4" stroke-linecap="round"/>
+  <path d="M114 45 L114 50 M206 45 L206 50" stroke="#0a0c0e" stroke-width="3"/>
+  <path d="M104 55 C132 51 186 51 220 55" fill="none" stroke="url(#sheen)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M80 84 C88 64 98 57 118 57 L202 57 C216 57 226 66 238 82 Z" fill="url(#glass)"/>
+  <rect x="134" y="56" width="6" height="30" fill="#3a424b"/>
+  <rect x="186" y="56" width="6" height="30" fill="#3a424b"/>
+  <path d="M96 82 L117 59 L127 59 L106 83 Z" fill="#fff" opacity=".16"/>
+  <path d="M200 82 L216 60 L223 61 L209 83 Z" fill="#fff" opacity=".12"/>
+  <path d="M48 102 C120 95 220 95 292 100" fill="none" stroke="#fff" stroke-opacity=".4" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M60 134 L278 134" stroke="#000" stroke-opacity=".6" stroke-width="5" stroke-linecap="round"/>
+  <path d="M137 87 L139 132" stroke="#4a525b" stroke-width="1.6"/>
+  <path d="M189 87 L191 132" stroke="#4a525b" stroke-width="1.6"/>
+  <rect x="112" y="98" width="13" height="4" rx="2" fill="#8a939c"/>
+  <rect x="164" y="98" width="13" height="4" rx="2" fill="#8a939c"/>
+  <path d="M236 82 C238 76 245 75 250 77 L250 85 L238 86 Z" fill="#2b3138"/>
+  <path d="M282 94 C290 95 296 99 298 106 L284 106 C281 102 280 97 282 94 Z" fill="url(#lamp)"/>
+  <path d="M38 96 L50 94 L50 108 L38 110 Z" fill="#d6332b"/>
+  <path d="M286 120 L300 120 M286 126 L300 126" stroke="#5f6770" stroke-width="2" stroke-linecap="round"/>
+  <path d="M56 144 A34 34 0 0 1 124 144 Z" fill="#1d2228"/>
+  <path d="M216 144 A34 34 0 0 1 284 144 Z" fill="#1d2228"/>
+  <g>
+    <circle cx="90" cy="150" r="27" fill="url(#tire)"/>
+    <circle cx="90" cy="150" r="15.7" fill="url(#rim)"/>
+    <g stroke="#7d858d" stroke-width="2.4" stroke-linecap="round"><path d="M90.0 137.8 L90.0 144.0"/><path d="M100.6 143.9 L95.2 147.0"/><path d="M100.6 156.1 L95.2 153.0"/><path d="M90.0 162.2 L90.0 156.0"/><path d="M79.4 156.1 L84.8 153.0"/><path d="M79.4 143.9 L84.8 147.0"/></g>
+    <circle cx="90" cy="150" r="4.6" fill="#9aa2aa"/>
+  </g>
+  <g>
+    <circle cx="250" cy="150" r="27" fill="url(#tire)"/>
+    <circle cx="250" cy="150" r="15.7" fill="url(#rim)"/>
+    <g stroke="#7d858d" stroke-width="2.4" stroke-linecap="round"><path d="M250.0 137.8 L250.0 144.0"/><path d="M260.6 143.9 L255.2 147.0"/><path d="M260.6 156.1 L255.2 153.0"/><path d="M250.0 162.2 L250.0 156.0"/><path d="M239.4 156.1 L244.8 153.0"/><path d="M239.4 143.9 L244.8 147.0"/></g>
+    <circle cx="250" cy="150" r="4.6" fill="#9aa2aa"/>
+  </g>
+</svg>
