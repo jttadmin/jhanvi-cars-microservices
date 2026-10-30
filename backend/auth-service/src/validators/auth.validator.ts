@@ -9,7 +9,9 @@ export const registerSchema = z.object({
     .string()
     .regex(/^[0-9]{10}$/, 'mobileNumber must be exactly 10 digits'),
   password: z.string().min(8).max(72),
-  role: z.enum(['CUSTOMER', 'DRIVER', 'ADMIN']).optional().default('CUSTOMER'),
+  // Public sign-up can only create customers and drivers. Admin accounts are
+  // never self-registered: promote an existing user in the database instead.
+  role: z.enum(['CUSTOMER', 'DRIVER']).optional().default('CUSTOMER'),
   licenseNumber: z.string().min(1).optional(),
   vehicleNumber: z.string().min(1).optional(),
   vehicleType: z
