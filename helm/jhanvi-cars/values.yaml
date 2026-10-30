@@ -4,62 +4,62 @@ global:
 images:
   apiGateway:
     repository: jhanviadmin/jhanvi-cars-api-gateway
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   authService:
     repository: jhanviadmin/jhanvi-cars-auth-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   userService:
     repository: jhanviadmin/jhanvi-cars-user-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   driverService:
     repository: jhanviadmin/jhanvi-cars-driver-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   bookingService:
     repository: jhanviadmin/jhanvi-cars-booking-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   vehicleService:
     repository: jhanviadmin/jhanvi-cars-vehicle-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   paymentService:
     repository: jhanviadmin/jhanvi-cars-payment-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   notificationService:
     repository: jhanviadmin/jhanvi-cars-notification-service
-    tag: "20261014-a8595aa"
+    tag: "sha-0410fc2"
 
   frontend:
     repository: jhanviadmin/jhanvi-cars-frontend
-    tag: "20261015-admin-maps-fix"
+    tag: "sha-0410fc2"
 
   migrations:
     auth:
       repository: jhanviadmin/jhanvi-cars-auth-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     user:
       repository: jhanviadmin/jhanvi-cars-user-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     driver:
       repository: jhanviadmin/jhanvi-cars-driver-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     booking:
       repository: jhanviadmin/jhanvi-cars-booking-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     vehicle:
       repository: jhanviadmin/jhanvi-cars-vehicle-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     payment:
       repository: jhanviadmin/jhanvi-cars-payment-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
     notification:
       repository: jhanviadmin/jhanvi-cars-notification-service-migration
-      tag: "20261014-a8595aa"
+      tag: "sha-0410fc2"
 
 
 services:
