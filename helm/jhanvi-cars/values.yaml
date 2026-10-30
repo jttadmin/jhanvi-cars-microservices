@@ -8,7 +8,7 @@ images:
 
   authService:
     repository: jhanviadmin/jhanvi-cars-auth-service
-    tag: "sha-0410fc2"
+    tag: "sha-1cd9f4a"
 
   userService:
     repository: jhanviadmin/jhanvi-cars-user-service
@@ -41,7 +41,7 @@ images:
   migrations:
     auth:
       repository: jhanviadmin/jhanvi-cars-auth-service-migration
-      tag: "sha-0410fc2"
+      tag: "sha-1cd9f4a"
     user:
       repository: jhanviadmin/jhanvi-cars-user-service-migration
       tag: "sha-0410fc2"
