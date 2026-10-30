@@ -1,16 +1,24 @@
-export default function BrandMark() {
+interface BrandMarkProps {
+  /** Use the light variant on dark backgrounds. */
+  inverted?: boolean;
+  size?: number;
+}
+
+export default function BrandMark({ inverted = false, size = 32 }: BrandMarkProps) {
+  const bg = inverted ? '#ffffff' : '#000000';
+  const fg = inverted ? '#000000' : '#ffffff';
+
   return (
-    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
-      <circle cx="15" cy="15" r="15" fill="var(--ink)" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill={bg} />
       <path
-        d="M9 19.5 15 8l6 11.5"
-        stroke="var(--yellow)"
-        strokeWidth="2.2"
+        d="M19.5 8.5v10.25a4.75 4.75 0 0 1-9.5 0"
+        stroke={fg}
+        strokeWidth="3"
         strokeLinecap="round"
-        strokeLinejoin="round"
         fill="none"
       />
-      <circle cx="15" cy="19.5" r="2.1" fill="var(--teal)" />
+      <circle cx="23.5" cy="23.5" r="2.25" fill="#05944f" />
     </svg>
   );
 }

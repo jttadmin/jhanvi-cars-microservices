@@ -1,19 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ==========================================================================
+   Jhanvi Cars design system — black & white, map-first, Uber-style
+   ========================================================================== */
 
 :root {
-  --ink: #14171f;
-  --paper: #fbf9f4;
-  --yellow: #ffc53d;
-  --teal: #1f6f5c;
-  --slate: #5b6070;
-  --line: #e7e1d2;
-  --danger: #c9463c;
+  /* Core palette */
+  --black: #000000;
+  --white: #ffffff;
+  --gray-50: #f6f6f6;
+  --gray-100: #eeeeee;
+  --gray-200: #e2e2e2;
+  --gray-300: #cbcbcb;
+  --gray-500: #757575;
+  --gray-600: #5e5e5e;
+  --gray-800: #282828;
+  --gray-900: #141414;
 
-  --font-display: 'Bricolage Grotesque', 'Manrope', sans-serif;
-  --font-body: 'Manrope', 'Segoe UI', sans-serif;
+  /* Semantic */
+  --text: var(--black);
+  --text-muted: var(--gray-600);
+  --surface: var(--white);
+  --surface-muted: var(--gray-50);
+  --border: var(--gray-200);
+  --positive: #05944f;
+  --positive-soft: #e6f2ed;
+  --warning: #ffc043;
+  --warning-soft: #fff4dc;
+  --warning-text: #7a5300;
+  --negative: #e11900;
+  --negative-soft: #ffefed;
+  --accent: #276ef1;
+  --accent-soft: #eef3fe;
 
-  --radius-card: 20px;
+  /* Legacy aliases (kept so older components keep working) */
+  --ink: var(--black);
+  --paper: var(--white);
+  --yellow: var(--warning);
+  --teal: var(--positive);
+  --slate: var(--gray-600);
+  --line: var(--border);
+  --danger: var(--negative);
+
+  /* Type */
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Shape & depth */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-card: var(--radius-lg);
   --radius-pill: 999px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.18);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 * {
@@ -30,24 +74,45 @@ body,
 
 body {
   font-family: var(--font-body);
-  color: var(--ink);
-  background: var(--paper);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--surface);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  color: inherit;
 }
 
-input {
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
   font-family: inherit;
+  color: inherit;
 }
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -58,16 +123,7 @@ a:focus-visible {
   }
 }
 
-/* ---------- Shared header (both dashboards) ---------- */
-
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--line);
-  background: var(--paper);
-}
+/* ---------- Brand ---------- */
 
 .brand-row {
   display: flex;
@@ -76,10 +132,9 @@ a:focus-visible {
 }
 
 .brand {
-  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -0.01em;
+  font-size: 20px;
+  letter-spacing: -0.03em;
 }
 
 .header-right {
@@ -89,46 +144,86 @@ a:focus-visible {
 }
 
 .role-pill {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--teal);
-  background: rgba(31, 111, 92, 0.12);
+  color: var(--white);
+  background: var(--gray-800);
   padding: 5px 12px;
   border-radius: var(--radius-pill);
 }
 
-.logout-button {
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--ink);
+/* ---------- Buttons ---------- */
+
+.btn,
+.book-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--black);
+  color: var(--white);
   font-weight: 600;
-  font-size: 13.5px;
-  padding: 8px 16px;
+  font-size: 16px;
+  transition: background 0.15s var(--ease), transform 0.1s var(--ease);
+}
+
+.btn:hover:not(:disabled),
+.book-button:hover:not(:disabled) {
+  background: var(--gray-800);
+}
+
+.btn:active:not(:disabled),
+.book-button:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn:disabled,
+.book-button:disabled {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.logout-button {
+  border: none;
+  background: var(--gray-100);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 16px;
   border-radius: var(--radius-pill);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s var(--ease);
 }
 
 .logout-button:hover {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
+  background: var(--gray-200);
 }
 
 /* ---------- Text helpers ---------- */
 
 .hint-text {
-  font-size: 13.5px;
-  color: var(--slate);
-  margin: 6px 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 8px 0;
 }
 
 .error-text {
-  font-size: 13.5px;
-  color: var(--danger);
-  margin: 6px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--negative);
+  background: var(--negative-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 10px 0;
 }
 
-/* ---------- Location dot markers (search fields + ride list) ---------- */
+/* ---------- Location markers (circle = pickup, square = drop) ---------- */
 
 .location-dot {
   width: 10px;
@@ -136,228 +231,73 @@ a:focus-visible {
   border-radius: 50%;
   flex-shrink: 0;
   display: inline-block;
+  background: var(--black);
 }
 
 .location-dot.pickup {
-  background: var(--teal);
+  border-radius: 50%;
 }
 
 .location-dot.destination {
-  border-radius: 3px;
-  background: var(--ink);
+  border-radius: 2px;
 }
 
-/* ---------- Buttons ---------- */
-
-.book-button {
-  width: 100%;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--yellow);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  padding: 14px 22px;
-  margin-top: 14px;
-  box-shadow: 0 10px 22px -10px rgba(255, 197, 61, 0.7);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-}
-
-.book-button:hover:not(:disabled) {
-  background: #ffb81c;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 26px -10px rgba(255, 197, 61, 0.85);
-}
-
-.book-button:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 6px 14px -8px rgba(255, 197, 61, 0.6);
-}
-
-.book-button:disabled {
-  box-shadow: none;
-}
-
-.book-button:disabled {
-  background: var(--line);
-  color: var(--slate);
-}
-
-/* ---------- Rides list (used by both dashboards) ---------- */
-
-.rides-section {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.rides-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.rides-tabs button {
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--slate);
-  font-weight: 600;
-  font-size: 13px;
-  padding: 7px 14px;
-  border-radius: var(--radius-pill);
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.rides-tabs button:hover:not(.active) {
-  border-color: var(--teal);
-  color: var(--teal);
-}
-
-.rides-tabs button.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-}
-
-.rides-total {
-  margin-left: auto;
-  font-size: 12.5px;
-  color: var(--slate);
-}
-
-.rides-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ride-row {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: #fff;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.ride-row:hover {
-  border-color: transparent;
-  box-shadow: 0 8px 20px -12px rgba(20, 23, 31, 0.25);
-}
-
-.ride-route {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13.5px;
-}
-
-.ride-point {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ride-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 13.5px;
-}
-
-.ride-actions {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.ride-actions button {
-  border: none;
-  background: var(--teal);
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  transition: background 0.12s ease, transform 0.1s ease;
-}
-
-.ride-actions button:hover:not(:disabled) {
-  background: #185a4a;
-}
-
-.ride-actions button:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.ride-actions button:disabled {
-  background: var(--line);
-  color: var(--slate);
-}
+/* ---------- Status pills ---------- */
 
 .status-pill {
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
   border-radius: var(--radius-pill);
-  background: var(--line);
-  color: var(--slate);
+  background: var(--gray-100);
+  color: var(--text);
 }
 
 .status-pill.status-pending {
-  background: rgba(255, 197, 61, 0.35);
-  color: #7a5b06;
+  background: var(--warning-soft);
+  color: var(--warning-text);
 }
 
-.status-pill.status-confirmed,
+.status-pill.status-confirmed {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .status-pill.status-ongoing {
-  background: rgba(31, 111, 92, 0.15);
-  color: var(--teal);
+  background: var(--positive-soft);
+  color: var(--positive);
 }
 
 .status-pill.status-completed {
-  background: rgba(20, 23, 31, 0.08);
-  color: var(--ink);
+  background: var(--gray-100);
+  color: var(--text);
 }
 
 .status-pill.status-cancelled {
-  background: rgba(201, 70, 60, 0.12);
-  color: var(--danger);
+  background: var(--negative-soft);
+  color: var(--negative);
 }
 
-/* ---------- Summary rows (fare / distance / duration / earnings) ---------- */
+/* ---------- Summary values ---------- */
 
 .summary-label {
   display: block;
-  font-size: 12px;
-  color: var(--slate);
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .summary-value {
   display: block;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
   margin-top: 2px;
 }
 
-.summary-value.fare {
-  color: var(--teal);
-}
-
-/* ---------- Google map wrapper (shared by both dashboards) ---------- */
+/* ---------- Google map wrapper ---------- */
 
 .ride-map-wrap {
   position: relative;
@@ -376,17 +316,29 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  text-align: center;
   font-size: 14px;
-  color: var(--slate);
-  background: var(--paper);
+  color: var(--text-muted);
+  background:
+    linear-gradient(var(--gray-100) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, var(--gray-100) 1px, transparent 1px) 0 0 / 48px 48px,
+    var(--gray-50);
 }
 
-/* Align dashboard header content with the centered driver dashboard */
-.dashboard-header {
-  padding: 14px max(24px, calc((100vw - 860px) / 2 + 22px));
+.map-overlay-text.error-text {
+  margin: 0;
+  border-radius: 0;
+  align-items: center;
 }
 
-/* Align dashboard header content with the centered driver dashboard */
-.dashboard-header {
-  padding: 14px max(24px, calc((100vw - 860px) / 2 + 22px));
+/* ---------- Spinner ---------- */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
