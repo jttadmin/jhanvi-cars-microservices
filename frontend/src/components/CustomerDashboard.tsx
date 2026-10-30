@@ -482,6 +482,14 @@ export default function CustomerDashboard({
         );
       }
 
+      // Never open Checkout without an order: Razorpay would take an
+      // unlinked payment that can't be verified (no order id / signature).
+      if (!razorpayOrder.razorpayOrderId || !razorpayOrder.keyId) {
+        throw new Error(
+          'Could not start payment: the payment order is incomplete. Please try again.',
+        );
+      }
+
       /*
        * Step 5:
        * Open Razorpay Checkout.
@@ -492,7 +500,7 @@ export default function CustomerDashboard({
         currency: razorpayOrder.currency,
         name: 'Jhanvi Cars',
         description: `Ride payment for booking ${createdBooking.id}`,
-        order_id: razorpayOrder.orderId,
+        order_id: razorpayOrder.razorpayOrderId,
         prefill: {
           name: user.name ?? '',
           email: user.email ?? '',
@@ -505,6 +513,16 @@ export default function CustomerDashboard({
           response: RazorpayResponse,
         ) => {
           try {
+            if (
+              !response.razorpay_order_id ||
+              !response.razorpay_payment_id ||
+              !response.razorpay_signature
+            ) {
+              throw new Error(
+                `Payment received but could not be verified automatically. Please contact support with payment ID ${response.razorpay_payment_id ?? 'unknown'}.`,
+              );
+            }
+
             /*
              * Step 6:
              * Verify the Razorpay signature on the backend.
@@ -525,7 +543,7 @@ export default function CustomerDashboard({
             await loadRides();
           } catch (error) {
             setBookError(
-              error instanceof ApiError
+              error instanceof ApiError || error instanceof Error
                 ? error.message
                 : 'Payment verification failed. Please contact support if money was deducted.',
             );
