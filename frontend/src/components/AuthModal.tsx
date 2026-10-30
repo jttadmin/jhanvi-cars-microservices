@@ -78,24 +78,24 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
         </span>
 
         <div className="auth-hero-copy">
-          <h2 className="auth-hero-title">Go anywhere with Jhanvi Cars</h2>
+          <h2 className="auth-hero-title">Your city, your ride.</h2>
           <p className="auth-hero-line">
-            Request a ride, hop in, and go. Autos to premium AC cars, booked in seconds.
+            From quick auto hops to premium AC cars, book a Jhanvi ride in seconds.
           </p>
         </div>
 
         <div className="auth-vehicle-strip" aria-hidden="true">
-          <img src="/vehicles/auto.webp" alt="" />
-          <img src="/vehicles/economy.webp" alt="" />
-          <img src="/vehicles/comfort.webp" alt="" />
-          <img src="/vehicles/comfort-plus.webp" alt="" />
+          <img src="/vehicles/auto-3d.webp" alt="" />
+          <img src="/vehicles/economy-3d.webp" alt="" />
+          <img src="/vehicles/comfort-3d.webp" alt="" />
+          <img src="/vehicles/comfort-plus-3d.webp" alt="" />
         </div>
       </aside>
 
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-card-inner">
           <h1 id="auth-title" className="auth-title">
-            {mode === 'login' ? 'What’s your phone number or email?' : 'Create your account'}
+            {mode === 'login' ? 'Log in to Jhanvi Cars' : 'Create your account'}
           </h1>
           <p className="auth-subtitle">
             {mode === 'login'
