@@ -5,6 +5,7 @@ import { getBookings, acceptBooking, startBooking, completeBooking } from '../ap
 import { ApiError } from '../api/client';
 import { formatStatus } from '../utils/format';
 import type { AuthUser, Booking } from '../types';
+import BrandMark from './BrandMark';
 import './DriverDashboard.css';
 
 interface DriverDashboardProps {
@@ -235,15 +236,79 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const earnings = bookings.filter((b) => b.status === 'COMPLETED').reduce((sum, b) => sum + b.fare, 0);
 
 
+  const driverName = driverProfile?.name ?? profile.name ?? 'Driver';
+  const inr = (value: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+
+  const actionFor = (ride: Booking) => {
+    const busy = actionLoadingId === ride.id;
+    if (ride.status === 'PENDING') {
+      return { action: 'accept' as const, label: busy ? 'Accepting…' : 'Accept trip' };
+    }
+    if (ride.status === 'CONFIRMED') {
+      return { action: 'start' as const, label: busy ? 'Starting…' : 'Start trip' };
+    }
+    if (ride.status === 'ONGOING') {
+      return { action: 'complete' as const, label: busy ? 'Completing…' : 'Complete trip' };
+    }
+    return null;
+  };
+
+  const renderRide = (ride: Booking, withActions: boolean) => {
+    const next = withActions ? actionFor(ride) : null;
+
+    return (
+      <li key={ride.id} className={`ride-row ${ride.status === 'PENDING' ? 'is-request' : ''}`}>
+        <div className="ride-row-top">
+          <span className={`status-pill status-${ride.status.toLowerCase()}`}>
+            {ride.status === 'PENDING' ? 'New request' : formatStatus(ride.status)}
+          </span>
+          <strong className="ride-fare">{inr(ride.fare)}</strong>
+        </div>
+
+        <div className="ride-route">
+          <div className="ride-point">
+            <span className="location-dot pickup" />
+            <span>
+              <small>Pickup</small>
+              {ride.pickupLocation}
+            </span>
+          </div>
+          <div className="ride-point">
+            <span className="location-dot destination" />
+            <span>
+              <small>Drop-off</small>
+              {ride.dropoffLocation}
+            </span>
+          </div>
+        </div>
+
+        {next && (
+          <div className="ride-actions">
+            <button
+              type="button"
+              className={`ride-action-${next.action}`}
+              disabled={actionLoadingId === ride.id}
+              onClick={() => handleAction(ride.id, next.action)}
+            >
+              {next.label}
+            </button>
+          </div>
+        )}
+      </li>
+    );
+  };
+
   return (
     <div className="driver-dashboard">
       <header className="driver-header">
-        <span>
+        <span className="brand-row">
+          <BrandMark inverted />
           <span className="brand">Jhanvi Cars</span>
-        </span>
-        <div className="header-right">
           <span className="role-pill">Driver</span>
+        </span>
 
+        <div className="header-right">
           <div className="profile-menu">
             <button
               type="button"
@@ -251,61 +316,38 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
               onClick={() => setProfileOpen((open) => !open)}
               aria-expanded={profileOpen}
             >
-              <span className="profile-avatar">
-                {(driverProfile?.name ?? profile.name ?? 'D').charAt(0).toUpperCase()}
+              <span className="profile-avatar">{driverName.charAt(0).toUpperCase()}</span>
+              <span className="profile-button-name">{driverName}</span>
+              <span className={`profile-chevron ${profileOpen ? 'open' : ''}`} aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </span>
-              <span className="profile-button-name">
-                {driverProfile?.name ?? profile.name ?? 'Driver'}
-              </span>
-              <span className="profile-chevron">⌄</span>
             </button>
 
             {profileOpen && (
               <div className="profile-dropdown">
-                <div className="profile-dropdown-title">Driver profile</div>
-
-                <div className="profile-detail">
-                  <span>Name</span>
-                  <strong>{driverProfile?.name ?? profile.name ?? '—'}</strong>
+                <div className="profile-dropdown-head">
+                  <span className="profile-avatar large">{driverName.charAt(0).toUpperCase()}</span>
+                  <div>
+                    <strong>{driverName}</strong>
+                    <span>
+                      {driverProfile?.rating
+                        ? `${driverProfile.rating.averageRating.toFixed(2)} ★ rating`
+                        : 'Jhanvi Cars driver'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="profile-detail">
-                  <span>Email</span>
-                  <strong>{driverProfile?.email ?? profile.email ?? '—'}</strong>
-                </div>
+                <dl className="profile-details">
+                  <div className="profile-detail"><dt>Email</dt><dd>{driverProfile?.email ?? profile.email ?? '—'}</dd></div>
+                  <div className="profile-detail"><dt>Mobile</dt><dd>{driverProfile?.phone ?? '—'}</dd></div>
+                  <div className="profile-detail"><dt>License</dt><dd>{driverProfile?.licenseNumber ?? '—'}</dd></div>
+                  <div className="profile-detail"><dt>Vehicle</dt><dd>{driverProfile?.vehicleModel ?? '—'}</dd></div>
+                  <div className="profile-detail"><dt>Type</dt><dd>{driverProfile?.vehicleType ?? '—'}</dd></div>
+                  <div className="profile-detail"><dt>Plate</dt><dd>{driverProfile?.vehicleNumber ?? '—'}</dd></div>
+                </dl>
 
-                <div className="profile-detail">
-                  <span>Mobile</span>
-                  <strong>{driverProfile?.phone ?? '—'}</strong>
-                </div>
-
-                <div className="profile-detail">
-                  <span>License</span>
-                  <strong>{driverProfile?.licenseNumber ?? '—'}</strong>
-                </div>
-
-                <div className="profile-detail">
-                  <span>Vehicle type</span>
-                  <strong>{driverProfile?.vehicleType ?? '—'}</strong>
-                </div>
-
-                <div className="profile-detail">
-                  <span>Vehicle model</span>
-                  <strong>{driverProfile?.vehicleModel ?? '—'}</strong>
-                </div>
-
-                <div className="profile-detail">
-                  <span>Vehicle number</span>
-                  <strong>{driverProfile?.vehicleNumber ?? '—'}</strong>
-                </div>
-
-                <div className="profile-detail">
-                  <span>Status</span>
-                  <strong>{driverProfile?.isAvailable ? 'Online' : 'Offline'}</strong>
-                </div>
-
-                <button className="logout-button profile-logout" onClick={onLogout}>
-                  Logout
+                <button type="button" className="logout-button profile-logout" onClick={onLogout}>
+                  Sign out
                 </button>
               </div>
             )}
@@ -314,163 +356,132 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       </header>
 
       <div className="driver-body">
-        <section className="driver-profile-card">
-          <div>
-            <h1 className="panel-heading">{profile.name ?? 'Driver'}</h1>
-            {profile.vehicle && (
-              <p className="vehicle-line">
-                {profile.vehicle.type} · {profile.vehicle.plateNumber}
-              </p>
+        {/* Online / offline hero */}
+        <section className={`driver-status-card ${isAvailable ? 'is-online' : 'is-offline'}`}>
+          <div className="driver-status-copy">
+            <span className="driver-status-label">
+              <span className="driver-status-dot" aria-hidden="true" />
+              {isAvailable ? 'You’re online' : 'You’re offline'}
+            </span>
+            <h1 className="panel-heading">
+              {isAvailable ? 'Finding trips near you' : `Ready to drive, ${driverName.split(' ')[0]}?`}
+            </h1>
+            <p className="vehicle-line">
+              {driverProfile?.vehicleModel ?? profile.vehicle?.type ?? 'Your vehicle'}
+              {(driverProfile?.vehicleNumber ?? profile.vehicle?.plateNumber) && (
+                <> · <span className="plate">{driverProfile?.vehicleNumber ?? profile.vehicle?.plateNumber}</span></>
+              )}
+            </p>
+
+            {isAvailable && (
+              <span className={`location-sharing-status ${locationError ? 'location-sharing-error' : ''}`}>
+                <span className={`location-sharing-led ${locationTracking && !locationError ? 'on' : ''}`} aria-hidden="true" />
+                {locationError
+                  ? 'Location sharing off'
+                  : locationTracking
+                    ? 'Sharing live location'
+                    : 'Getting your location…'}
+              </span>
             )}
           </div>
-          <div className="availability-toggle">
-            <span>{isAvailable ? 'Online' : 'Offline'}</span>
+
+          <button
+            type="button"
+            className={`go-button ${isAvailable ? 'on' : ''}`}
+            onClick={toggleAvailability}
+            disabled={availabilityLoading}
+            aria-pressed={isAvailable}
+            aria-label={isAvailable ? 'Go offline' : 'Go online'}
+          >
+            {availabilityLoading ? <span className="go-spinner" aria-hidden="true" /> : isAvailable ? 'STOP' : 'GO'}
+          </button>
+        </section>
+
+        {availabilityError && <p className="error-text">{availabilityError}</p>}
+        {locationError && <p className="error-text">{locationError}</p>}
+
+        {/* Earnings */}
+        <section className="earnings-card" aria-label="Earnings">
+          <div className="earnings-hero">
+            <span className="summary-label">Today</span>
+            <span className="summary-value">{inr(driverProfile?.earnings?.todayEarnings ?? 0)}</span>
+          </div>
+          <div className="earnings-grid">
+            <div>
+              <span className="summary-label">This week</span>
+              <span className="summary-value">{inr(driverProfile?.earnings?.weekEarnings ?? 0)}</span>
+            </div>
+            <div>
+              <span className="summary-label">All time</span>
+              <span className="summary-value">{inr(driverProfile?.earnings?.totalEarnings ?? earnings)}</span>
+            </div>
+            <div>
+              <span className="summary-label">Trips</span>
+              <span className="summary-value">{driverProfile?.earnings?.totalTrips ?? completedCount}</span>
+            </div>
+            <div>
+              <span className="summary-label">Rating</span>
+              <span className="summary-value">
+                {driverProfile?.rating ? `${driverProfile.rating.averageRating.toFixed(2)} ★` : '—'}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Trips */}
+        <section className="rides-section">
+          <div className="rides-tabs" role="tablist">
             <button
               type="button"
-              className={`toggle-switch ${isAvailable ? 'on' : ''}`}
-              onClick={toggleAvailability}
-              disabled={availabilityLoading}
-              aria-pressed={isAvailable}
-              aria-label="Toggle online status"
+              role="tab"
+              aria-selected={tab === 'assigned'}
+              className={tab === 'assigned' ? 'active' : ''}
+              onClick={() => setTab('assigned')}
             >
-              <span className="toggle-knob" />
+              Trips ({visibleAssigned.length})
             </button>
-          </div>
-        </section>
-
-        {availabilityLoading && <p className="hint-text">Updating availability…</p>}
-        {availabilityError && <p className="error-text">{availabilityError}</p>}
-
-        {locationError && (
-          <div className="location-sharing-status location-sharing-error">
-            <span className="location-sharing-icon">📍</span>
-            <span className="location-sharing-label">Location</span>
-            <span className="location-sharing-state">OFF</span>
-          </div>
-        )}
-
-        {isAvailable && !locationError && (
-          <div className="location-sharing-status">
-            <span className="location-sharing-icon">📍</span>
-            <span className="location-sharing-label">Location</span>
-            <span className={locationTracking ? 'status-on' : 'status-off'}>
-              {locationTracking ? 'ON' : 'OFF'}
-            </span>
-          </div>
-        )}
-
-        <section className="earnings-card">
-          <div>
-            <span className="summary-label">Total trips</span>
-            <span className="summary-value">
-              {driverProfile?.earnings?.totalTrips ?? completedCount}
-            </span>
-          </div>
-          <div>
-            <span className="summary-label">Total earnings</span>
-            <span className="summary-value fare">
-              ₹{driverProfile?.earnings?.totalEarnings ?? earnings}
-            </span>
-          </div>
-          <div>
-            <span className="summary-label">Today</span>
-            <span className="summary-value fare">
-              ₹{driverProfile?.earnings?.todayEarnings ?? 0}
-            </span>
-          </div>
-          <div>
-            <span className="summary-label">This week</span>
-            <span className="summary-value fare">
-              ₹{driverProfile?.earnings?.weekEarnings ?? 0}
-            </span>
-          </div>
-          <div>
-            <span className="summary-label">Rating</span>
-            <span className="summary-value">
-              {driverProfile?.rating
-                ? `${driverProfile.rating.averageRating.toFixed(1)} ★`
-                : '—'}
-            </span>
-          </div>
-        </section>
-
-        <section className="rides-section">
-          <div className="rides-tabs">
-            <button className={tab === 'assigned' ? 'active' : ''} onClick={() => setTab('assigned')}>
-              Assigned ({visibleAssigned.length})
-            </button>
-            <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'history'}
+              className={tab === 'history' ? 'active' : ''}
+              onClick={() => setTab('history')}
+            >
               History ({historyRides.length})
             </button>
           </div>
 
-          {ridesLoading && <p className="hint-text">Loading rides…</p>}
+          {ridesLoading && <p className="hint-text">Loading trips…</p>}
           {ridesError && <p className="error-text">{ridesError}</p>}
           {actionError && <p className="error-text">{actionError}</p>}
 
           {!ridesLoading && !ridesError && tab === 'assigned' && (
             <ul className="rides-list">
-              {!isAvailable && <li className="hint-text">Go online to see new ride requests.</li>}
-              {isAvailable && visibleAssigned.length === 0 && <li className="hint-text">No assigned rides right now.</li>}
-              {visibleAssigned.map((ride) => (
-                <li key={ride.id} className="ride-row">
-                  <div className="ride-route">
-                    <div className="ride-point">
-                      <span className="location-dot pickup" />
-                      {ride.pickupLocation}
-                    </div>
-                    <div className="ride-point">
-                      <span className="location-dot destination" />
-                      {ride.dropoffLocation}
-                    </div>
-                  </div>
-                  <div className="ride-meta">
-                    <span className={`status-pill status-${ride.status.toLowerCase()}`}>{formatStatus(ride.status)}</span>
-                    <span>₹{ride.fare}</span>
-                  </div>
-                  <div className="ride-actions">
-                    {ride.status === 'PENDING' && (
-                      <button disabled={actionLoadingId === ride.id} onClick={() => handleAction(ride.id, 'accept')}>
-                        {actionLoadingId === ride.id ? 'Accepting…' : 'Accept'}
-                      </button>
-                    )}
-                    {ride.status === 'CONFIRMED' && (
-                      <button disabled={actionLoadingId === ride.id} onClick={() => handleAction(ride.id, 'start')}>
-                        {actionLoadingId === ride.id ? 'Starting…' : 'Start ride'}
-                      </button>
-                    )}
-                    {ride.status === 'ONGOING' && (
-                      <button disabled={actionLoadingId === ride.id} onClick={() => handleAction(ride.id, 'complete')}>
-                        {actionLoadingId === ride.id ? 'Completing…' : 'Complete ride'}
-                      </button>
-                    )}
-                  </div>
+              {!isAvailable && visibleAssigned.length === 0 && (
+                <li className="rides-empty">
+                  <strong>You’re offline</strong>
+                  <span>Tap GO to start receiving trip requests.</span>
                 </li>
-              ))}
+              )}
+              {isAvailable && visibleAssigned.length === 0 && (
+                <li className="rides-empty">
+                  <strong>No trips right now</strong>
+                  <span>Stay online — new requests show up here automatically.</span>
+                </li>
+              )}
+              {visibleAssigned.map((ride) => renderRide(ride, true))}
             </ul>
           )}
 
           {!ridesLoading && !ridesError && tab === 'history' && (
             <ul className="rides-list">
-              {historyRides.length === 0 && <li className="hint-text">No past rides yet.</li>}
-              {historyRides.map((ride) => (
-                <li key={ride.id} className="ride-row">
-                  <div className="ride-route">
-                    <div className="ride-point">
-                      <span className="location-dot pickup" />
-                      {ride.pickupLocation}
-                    </div>
-                    <div className="ride-point">
-                      <span className="location-dot destination" />
-                      {ride.dropoffLocation}
-                    </div>
-                  </div>
-                  <div className="ride-meta">
-                    <span className={`status-pill status-${ride.status.toLowerCase()}`}>{formatStatus(ride.status)}</span>
-                    <span>₹{ride.fare}</span>
-                  </div>
+              {historyRides.length === 0 && (
+                <li className="rides-empty">
+                  <strong>No past trips yet</strong>
+                  <span>Completed trips will be listed here.</span>
                 </li>
-              ))}
+              )}
+              {historyRides.map((ride) => renderRide(ride, false))}
             </ul>
           )}
         </section>

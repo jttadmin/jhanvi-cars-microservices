@@ -64,114 +64,89 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
   }
 
   return (
-    <div className="auth-overlay">
+    <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       {onClose && (
         <button type="button" className="auth-close" onClick={onClose} aria-label="Close">
           ×
         </button>
       )}
-      <div className="auth-hero">
+
+      <aside className="auth-hero">
         <span className="brand-row auth-hero-brand">
-          <BrandMark />
+          <BrandMark inverted />
           <span className="brand">Jhanvi Cars</span>
         </span>
+
         <div className="auth-hero-copy">
-          <h2 className="auth-hero-title"><span className="hero-title-main">Every Ride</span><span className="hero-title-accent">Takes You Further</span></h2>
+          <h2 className="auth-hero-title">Go anywhere with Jhanvi Cars</h2>
+          <p className="auth-hero-line">
+            Request a ride, hop in, and go. Autos to premium AC cars, booked in seconds.
+          </p>
         </div>
 
-        <svg className="auth-hero-route" viewBox="0 0 320 180" fill="none" aria-hidden="true">
-          <path
-            d="M10 150 C 70 150, 90 60, 150 60 S 230 150, 300 40"
-            stroke="var(--yellow)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="1 14"
-          />
-          <circle cx="10" cy="150" r="6" fill="var(--teal)" />
-          <circle cx="300" cy="40" r="6" fill="var(--paper)" />
-        </svg>
-        <div className="auth-hero-city" aria-hidden="true">
-        <div className="city-building city-building-1"></div>
-        <div className="city-building city-building-2"></div>
-        <div className="city-building city-building-3"></div>
-        <div className="city-building city-building-4"></div>
-      </div>
-
-      <div className="auth-hero-car" aria-hidden="true">
-        <div className="car-window"></div>
-        <div className="car-body"></div>
-        <div className="car-wheel car-wheel-left"></div>
-        <div className="car-wheel car-wheel-right"></div>
-        <div className="car-light"></div>
-      </div>
-
-      <p className="auth-hero-line">Auto. Sedan. SUV. Wherever you’re headed, book it in seconds.</p>
-      <div className="auth-vehicle-types" aria-label="Vehicle types">
-        <div className="auth-vehicle-card">
-          <span className="vehicle-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48">
-              <path d="M10 29h28v7H10z"/>
-              <path d="M14 29l4-11h12l4 11"/>
-              <circle cx="16" cy="38" r="4"/>
-              <circle cx="32" cy="38" r="4"/>
-              <path d="M20 22h8"/>
-            </svg>
-          </span>
-          <strong>Auto</strong>
+        <div className="auth-vehicle-strip" aria-hidden="true">
+          <img src="/vehicles/auto.webp" alt="" />
+          <img src="/vehicles/economy.webp" alt="" />
+          <img src="/vehicles/comfort.webp" alt="" />
+          <img src="/vehicles/comfort-plus.webp" alt="" />
         </div>
-
-        <div className="auth-vehicle-card">
-          <span className="vehicle-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48">
-              <path d="M8 31h32v6H8z"/>
-              <path d="M13 31l5-12h12l6 12"/>
-              <path d="M20 21h8"/>
-              <circle cx="15" cy="38" r="4"/>
-              <circle cx="33" cy="38" r="4"/>
-            </svg>
-          </span>
-          <strong>Sedan</strong>
-        </div>
-
-        <div className="auth-vehicle-card">
-          <span className="vehicle-icon" aria-hidden="true">
-            <svg viewBox="0 0 48 48">
-              <path d="M7 31h34v7H7z"/>
-              <path d="M11 31l5-13h16l7 13"/>
-              <path d="M19 20h10"/>
-              <circle cx="15" cy="39" r="4"/>
-              <circle cx="34" cy="39" r="4"/>
-            </svg>
-          </span>
-          <strong>SUV</strong>
-        </div>
-      </div>
-
-      </div>
+      </aside>
 
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1 className="auth-title">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
-        <p className="auth-subtitle">{mode === 'login' ? 'Log in to book or drive.' : 'Start driving with Jhanvi Cars.'}</p>
+        <div className="auth-card-inner">
+          <h1 id="auth-title" className="auth-title">
+            {mode === 'login' ? 'What’s your phone number or email?' : 'Create your account'}
+          </h1>
+          <p className="auth-subtitle">
+            {mode === 'login'
+              ? 'Log in to book a ride or start driving.'
+              : 'Ride with Jhanvi Cars, or sign up to drive.'}
+          </p>
+
+          {mode === 'register' && (
+            <div className="auth-role-toggle" role="tablist" aria-label="Account type">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={role === 'CUSTOMER'}
+                className={role === 'CUSTOMER' ? 'active' : ''}
+                onClick={() => setRole('CUSTOMER')}
+              >
+                Ride
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={role === 'DRIVER'}
+                className={role === 'DRIVER' ? 'active' : ''}
+                onClick={() => setRole('DRIVER')}
+              >
+                Drive
+              </button>
+            </div>
+          )}
 
         {mode === 'register' && (
           <>
-            <label className="auth-field auth-field-icon">
-              <span className="field-icon" aria-hidden="true">♙</span>
+            <label className="auth-field">
+              <span>Full name</span>
               <input
-                placeholder="Full name"
+                placeholder="Enter your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
                 required
               />
             </label>
 
-            <label className="auth-field auth-field-icon">
-              <span className="field-icon" aria-hidden="true">☎</span>
+            <label className="auth-field">
+              <span>Mobile number</span>
               <input
                 type="tel"
-                placeholder="Mobile number"
+                placeholder="10-digit mobile number"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
+                autoComplete="tel"
                 required
               />
             </label>
@@ -179,7 +154,7 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
             {role === 'DRIVER' && (
               <>
                 <label className="auth-field">
-                  License number
+                  <span>License number</span>
                   <input
                     value={licenseNumber}
                     onChange={(e) => setLicenseNumber(e.target.value)}
@@ -188,7 +163,7 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
                 </label>
 
                 <label className="auth-field">
-                  Vehicle type
+                  <span>Vehicle type</span>
                   <select
                     value={vehicleType}
                     onChange={(e) =>
@@ -210,7 +185,7 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
                 </label>
 
                 <label className="auth-field">
-                  Vehicle model
+                  <span>Vehicle model</span>
                   <input
                     value={vehicleModel}
                     onChange={(e) => setVehicleModel(e.target.value)}
@@ -220,7 +195,7 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
                 </label>
 
                 <label className="auth-field">
-                  Vehicle number
+                  <span>Vehicle number</span>
                   <input
                     value={vehicleNumber}
                     onChange={(e) => setVehicleNumber(e.target.value)}
@@ -233,63 +208,57 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
           </>
         )}
 
-        <label className="auth-field auth-field-icon">
-          <span className="field-icon" aria-hidden="true">✉</span>
+        <label className="auth-field">
+          <span>{mode === 'login' ? 'Email or mobile number' : 'Email'}</span>
           <input
             type={mode === 'login' ? 'text' : 'email'}
-            placeholder={mode === 'login' ? 'Email or mobile number' : 'Email'}
+            placeholder={mode === 'login' ? 'name@example.com or 98XXXXXXXX' : 'name@example.com'}
             value={mode === 'login' ? loginIdentifier : email}
             onChange={(e) =>
               mode === 'login'
                 ? setLoginIdentifier(e.target.value)
                 : setEmail(e.target.value)
             }
+            autoComplete={mode === 'login' ? 'username' : 'email'}
             required
           />
         </label>
 
-        <label className="auth-field auth-field-icon">
-          <span className="field-icon" aria-hidden="true">🔒</span>
+        <label className="auth-field">
+          <span>Password</span>
           <input
             type="password"
-            placeholder="Password"
+            placeholder="At least 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             required
             minLength={8}
           />
         </label>
 
         {mode === 'register' && (
-          <label className="auth-field auth-field-icon">
-            <span className="field-icon" aria-hidden="true">🔒</span>
+          <label className="auth-field">
+            <span>Confirm password</span>
             <input
               type="password"
-              placeholder="Confirm password"
+              placeholder="Re-enter your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
               required
               minLength={8}
             />
           </label>
         )}
 
-        {mode === 'register' && (
-          <div className="auth-role-toggle">
-            <button type="button" className={role === 'CUSTOMER' ? 'active' : ''} onClick={() => setRole('CUSTOMER')}>
-              I'm a customer
-            </button>
-            <button type="button" className={role === 'DRIVER' ? 'active' : ''} onClick={() => setRole('DRIVER')}>
-              I'm a driver
-            </button>
-          </div>
-        )}
+        {error && <p className="error-text" role="alert">{error}</p>}
 
-        {error && <p className="error-text">{error}</p>}
-
-        <button type="submit" className="book-button" disabled={loading}>
-          {loading ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Log in' : 'Sign up'}
+        <button type="submit" className="book-button auth-submit" disabled={loading}>
+          {loading ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Continue' : 'Create account'}
         </button>
+
+        <div className="auth-divider"><span>or</span></div>
 
         <button
           type="button"
@@ -297,11 +266,12 @@ export default function AuthModal({ onAuthenticated, onClose }: AuthModalProps) 
           onClick={() => {
             setMode(mode === 'login' ? 'register' : 'login');
             setError(null);
-	    setConfirmPassword('');
+            setConfirmPassword('');
           }}
         >
-          {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in'}
+          {mode === 'login' ? 'Create a new account' : 'I already have an account'}
         </button>
+        </div>
       </form>
     </div>
   );

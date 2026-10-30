@@ -29,19 +29,37 @@ interface CustomerDashboardProps {
 
 
 
-function getRideVehicleIcon(vehicleType?: string): string {
-  switch (vehicleType) {
-    case 'AUTO':
-      return '🛺';
-    case 'ECONOMY':
-      return '🚕';
-    case 'COMFORT':
-      return '🚘';
-    case 'COMFORT_PLUS':
-      return '🚙';
+const RIDE_TYPES: RideType[] = ['AUTO', 'ECONOMY', 'COMFORT', 'COMFORT_PLUS'];
+
+function asRideType(vehicleType?: string): RideType {
+  return RIDE_TYPES.includes(vehicleType as RideType)
+    ? (vehicleType as RideType)
+    : 'ECONOMY';
+}
+
+function getRideTitle(ride: Booking): string {
+  switch (ride.status) {
+    case 'PENDING':
+      return 'Finding your driver…';
+    case 'CONFIRMED':
+      return ride.driverId ? 'Driver is on the way' : 'Confirming your driver…';
+    case 'ONGOING':
+      return 'On the way to destination';
     default:
-      return '🚗';
+      return formatStatus(ride.status);
   }
+}
+
+function formatRideTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 const rideOptions: Array<{
@@ -144,6 +162,7 @@ export default function CustomerDashboard({
   const [ridesError, setRidesError] = useState<string | null>(null);
   const [rideType, setRideType] = useState<RideType>('ECONOMY');
   const [showHistory, setShowHistory] = useState(false);
+  const [panelView, setPanelView] = useState<'ride' | 'activity'>('ride');
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileEmail, setProfileEmail] = useState('');
   const [profileMobile, setProfileMobile] = useState('');
@@ -480,7 +499,7 @@ export default function CustomerDashboard({
           contact: user.mobileNumber ?? '',
         },
         theme: {
-          color: '#111827',
+          color: '#000000',
         },
         handler: async (
           response: RazorpayResponse,
@@ -618,23 +637,60 @@ export default function CustomerDashboard({
     }
   };
 
-  
+  const selectedOption =
+    rideOptions.find((option) => option.type === rideType) ?? rideOptions[1];
+  const liveRide = activeRides[0];
+  const initial = (user?.name || 'C').slice(0, 1).toUpperCase();
+
+  const openActivity = (history: boolean) => {
+    setShowHistory(history);
+    setPanelView('activity');
+    setProfileMenuOpen(false);
+  };
+
   return (
     <div className="customer-app">
+      {/* Full-screen map */}
+      <div className="customer-map">
+        <GoogleRideMap
+          pickup={pickup}
+          destination={destination}
+          route={route}
+        />
+
+        {route && (
+          <div className="map-route-chip" aria-live="polite">
+            <strong>{route.durationMin} min</strong>
+            <span>{route.distanceKm} km</span>
+          </div>
+        )}
+      </div>
+
+      {/* Floating top bar */}
       <header className="customer-topbar">
         <div className="customer-brand">
-          <BrandMark />
+          <BrandMark inverted />
           <span>Jhanvi Cars</span>
         </div>
 
         <nav className="customer-nav" aria-label="Customer navigation">
-          <button className="nav-item active">Book Ride</button>
+          <button
+            type="button"
+            className={`nav-item ${panelView === 'ride' ? 'active' : ''}`}
+            onClick={() => setPanelView('ride')}
+          >
+            Ride
+          </button>
           {user && (
             <button
-              className={`nav-item ${showHistory ? 'active-history' : ''}`}
-              onClick={() => setShowHistory(true)}
+              type="button"
+              className={`nav-item ${panelView === 'activity' ? 'active' : ''}`}
+              onClick={() => openActivity(false)}
             >
-              My Rides
+              Activity
+              {activeRides.length > 0 && (
+                <span className="nav-badge">{activeRides.length}</span>
+              )}
             </button>
           )}
         </nav>
@@ -649,98 +705,405 @@ export default function CustomerDashboard({
                 aria-expanded={profileMenuOpen}
                 aria-haspopup="menu"
               >
-                <div className="account-avatar">
-                  {(user.name || 'C').slice(0, 1).toUpperCase()}
-                </div>
-
-                <div className="account-copy">
-                  <strong>{user.name || 'Customer'}</strong>
-                  <span>Customer</span>
-                </div>
-
-                <span className={`account-chevron ${profileMenuOpen ? 'open' : ''}`}>
-                 ⌄
+                <span className="account-avatar">{initial}</span>
+                <span className="account-name">{user.name || 'Customer'}</span>
+                <span className={`account-chevron ${profileMenuOpen ? 'open' : ''}`} aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </span>
               </button>
 
               {profileMenuOpen && (
                 <div className="profile-dropdown" role="menu">
                   <div className="profile-dropdown-header">
-                    <div className="profile-dropdown-avatar">
-                      {(user.name || 'C').slice(0, 1).toUpperCase()}
-                    </div>
+                    <span className="profile-dropdown-avatar">{initial}</span>
                     <div>
                       <strong>{user.name || 'Customer'}</strong>
                       <span>{user.email}</span>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={openProfile}
-                  >
-                    <span>👤</span>
-                    <span>
-                      <strong>My Profile</strong>
-                      <small>Personal information</small>
-                    </span>
+                  <button type="button" role="menuitem" className="profile-menu-item" onClick={openProfile}>
+                    <strong>Manage account</strong>
+                    <small>Email and mobile number</small>
                   </button>
 
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={() => setProfileMenuOpen(false)}
-                  >
-                    <span>💳</span>
-                    <span>
-                      <strong>My Wallet</strong>
-                      <small>Coming soon</small>
-                    </span>
+                  <button type="button" role="menuitem" className="profile-menu-item" onClick={() => openActivity(true)}>
+                    <strong>Trips</strong>
+                    <small>Your past rides</small>
                   </button>
 
-                  <button
-                    type="button"
-                    className="profile-menu-item"
-                    onClick={() => {
-                      setShowHistory(true);
-                      setProfileMenuOpen(false);
-                    }}
-                  >
-                    <span>🚕</span>
-                    <span>
-                      <strong>My Rides</strong>
-                      <small>Ride history</small>
-                    </span>
+                  <button type="button" role="menuitem" className="profile-menu-item" disabled>
+                    <strong>Wallet</strong>
+                    <small>Coming soon</small>
                   </button>
 
                   <div className="profile-menu-divider" />
 
-                  <button
-                    type="button"
-                    className="profile-menu-item logout-item"
-                    onClick={onLogout}
-                  >
-                    <span>↪</span>
-                    <span>
-                      <strong>Logout</strong>
-                      <small>Sign out of Jhanvi Cars</small>
-                    </span>
+                  <button type="button" role="menuitem" className="profile-menu-item logout-item" onClick={onLogout}>
+                    <strong>Sign out</strong>
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <button className="guest-login" onClick={onRequireAuth}>
-              Log in
-            </button>
+            <div className="guest-actions">
+              <button type="button" className="guest-login" onClick={onRequireAuth}>
+                Log in
+              </button>
+              <button type="button" className="guest-signup" onClick={onRequireAuth}>
+                Sign up
+              </button>
+            </div>
           )}
         </div>
       </header>
 
+      {/* Booking / activity panel */}
+      <main className="customer-panel">
+        {panelView === 'ride' ? (
+          <section className="panel-view" aria-labelledby="get-ride-title">
+            <div className="panel-scroll">
+              {liveRide && (
+                <button
+                  type="button"
+                  className="live-ride-banner"
+                  onClick={() => openActivity(false)}
+                >
+                  <span className={`live-dot ${getStatusClass(liveRide.status)}`} aria-hidden="true" />
+                  <span className="live-ride-copy">
+                    <strong>{getRideTitle(liveRide)}</strong>
+                    <small>{liveRide.dropoffLocation}</small>
+                  </span>
+                  <span className="live-ride-cta">View</span>
+                </button>
+              )}
+
+              <h1 id="get-ride-title" className="panel-title">Get a ride</h1>
+
+              <div className="location-stack">
+                <div className="location-rail" aria-hidden="true">
+                  <span className="rail-dot" />
+                  <span className="rail-line" />
+                  <span className="rail-square" />
+                </div>
+
+                <div className="location-fields">
+                  <label className={`location-box ${pickup ? 'has-value' : ''}`}>
+                    <span className="sr-only">Pickup location</span>
+                    <input
+                      ref={pickupInputRef}
+                      placeholder="Pickup location"
+                      autoComplete="off"
+                      aria-label="Pickup location"
+                    />
+                    {pickup && (
+                      <button
+                        className="clear-location"
+                        type="button"
+                        onClick={() => {
+                          setPickup(null);
+                          setRoute(null);
+                          if (pickupInputRef.current) {
+                            pickupInputRef.current.value = '';
+                          }
+                        }}
+                        aria-label="Clear pickup location"
+                        title="Clear pickup location"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </label>
+
+                  <label className={`location-box ${destination ? 'has-value' : ''}`}>
+                    <span className="sr-only">Destination</span>
+                    <input
+                      ref={destInputRef}
+                      placeholder="Where to?"
+                      autoComplete="off"
+                      aria-label="Destination"
+                    />
+                    {destination && (
+                      <button
+                        className="clear-location"
+                        type="button"
+                        onClick={() => {
+                          setDestination(null);
+                          setRoute(null);
+                          if (destInputRef.current) {
+                            destInputRef.current.value = '';
+                          }
+                        }}
+                        aria-label="Clear destination"
+                        title="Clear destination"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </label>
+                </div>
+
+                <button
+                  className="swap-location"
+                  type="button"
+                  onClick={handleSwapLocations}
+                  disabled={!pickup && !destination}
+                  aria-label="Swap pickup and destination"
+                  title="Swap pickup and destination"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.5 3v12M5.5 3 3 5.5M5.5 3 8 5.5M12.5 15V3M12.5 15 10 12.5M12.5 15l2.5-2.5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              </div>
+
+              <button
+                className="location-button"
+                type="button"
+                onClick={handleUseCurrentLocation}
+              >
+                <span className="location-button-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 16 16"><path d="M14.5 1.5 1.5 7l5.5 2 2 5.5z" fill="currentColor" /></svg>
+                </span>
+                <span>
+                  <strong>Use current location</strong>
+                  <small>Set pickup to where you are now</small>
+                </span>
+              </button>
+
+              {placesError && <p className="error-text">{placesError}</p>}
+
+              {routeLoading && (
+                <div className="route-loading">
+                  <span className="loading-bar" />
+                  Finding the best route…
+                </div>
+              )}
+
+              {routeError && <p className="error-text">{routeError}</p>}
+
+              <div className="section-heading">
+                <h2>Choose a ride</h2>
+                {!route && <span>Add a destination to see prices</span>}
+              </div>
+
+              <div className="ride-options" role="radiogroup" aria-label="Ride type">
+                {rideOptions.map((option) => {
+                  const optionFare = route ? estimateFare(route, option.type) : null;
+                  const selected = rideType === option.type;
+
+                  return (
+                    <button
+                      key={option.type}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      className={`ride-option ${selected ? 'selected' : ''}`}
+                      onClick={() => setRideType(option.type)}
+                    >
+                      <span className="ride-option-icon">
+                        <RideIcon type={option.type} />
+                      </span>
+
+                      <span className="ride-option-copy">
+                        <strong>{option.label}</strong>
+                        <small>
+                          {option.eta} away
+                          {option.subtitle && <> · {option.subtitle}</>}
+                        </small>
+                      </span>
+
+                      <span className="ride-option-price">
+                        {optionFare !== null ? (
+                          <strong>₹{optionFare}</strong>
+                        ) : (
+                          <small>{option.range}</small>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="panel-footer">
+              <div className="payment-row">
+                <span className="payment-icon" aria-hidden="true">₹</span>
+                <span>UPI, cards &amp; netbanking</span>
+                <small>via Razorpay</small>
+              </div>
+
+              {bookError && <p className="error-text">{bookError}</p>}
+
+              <button
+                type="button"
+                className={`primary-book-button ${booking ? 'is-booking' : ''}`}
+                disabled={!route || routeLoading || booking}
+                onClick={handleBook}
+              >
+                {booking ? (
+                  <>
+                    <span className="book-spinner" aria-hidden="true" />
+                    <span>Requesting your ride…</span>
+                  </>
+                ) : fare ? (
+                  <span>Request {selectedOption.label} · ₹{fare}</span>
+                ) : (
+                  <span>Request {selectedOption.label}</span>
+                )}
+              </button>
+
+              {!user && (
+                <p className="booking-login-note">
+                  Plan your trip now — you’ll{' '}
+                  <button type="button" onClick={onRequireAuth}>log in</button>{' '}
+                  before paying.
+                </p>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="panel-view" aria-labelledby="activity-title">
+            <div className="panel-scroll">
+              <div className="activity-header">
+                <button
+                  type="button"
+                  className="panel-back"
+                  onClick={() => setPanelView('ride')}
+                  aria-label="Back to booking"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6.5 10l6 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+                <h1 id="activity-title" className="panel-title">Activity</h1>
+              </div>
+
+              <div className="segmented" role="tablist" aria-label="Ride list">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!showHistory}
+                  className={!showHistory ? 'active' : ''}
+                  onClick={() => setShowHistory(false)}
+                >
+                  Upcoming ({activeRides.length})
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={showHistory}
+                  className={showHistory ? 'active' : ''}
+                  onClick={() => setShowHistory(true)}
+                >
+                  Past ({historyRides.length})
+                </button>
+              </div>
+
+              {ridesLoading ? (
+                <div className="empty-rides">
+                  <span className="spinner" aria-hidden="true" />
+                  Loading your rides…
+                </div>
+              ) : ridesError ? (
+                <p className="error-text">{ridesError}</p>
+              ) : visibleRides.length === 0 ? (
+                <div className="empty-rides">
+                  <strong>{showHistory ? 'No past trips yet' : 'You have no upcoming rides'}</strong>
+                  <p>
+                    {showHistory
+                      ? 'Completed and cancelled trips will show up here.'
+                      : 'Where are you headed next?'}
+                  </p>
+                  {!showHistory && (
+                    <button type="button" className="empty-cta" onClick={() => setPanelView('ride')}>
+                      Book a ride
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="ride-list">
+                  {visibleRides.map((ride) => {
+                    const isLive = ride.status !== 'COMPLETED' && ride.status !== 'CANCELLED';
+                    const vehicleLabel =
+                      rideOptions.find((o) => o.type === asRideType(ride.vehicleType))?.label ?? 'Ride';
+
+                    return (
+                      <article
+                        key={ride.id}
+                        className={`customer-ride-card ${isLive ? 'is-live' : ''}`}
+                      >
+                        <div className="ride-card-main">
+                          <span className="ride-vehicle-icon">
+                            <RideIcon type={asRideType(ride.vehicleType)} />
+                          </span>
+
+                          <div className="ride-card-title">
+                            <strong>{isLive ? getRideTitle(ride) : ride.dropoffLocation}</strong>
+                            <span>
+                              {formatRideTime(ride.scheduledAt)} · {vehicleLabel}
+                            </span>
+                          </div>
+
+                          <strong className="ride-price">₹{ride.fare}</strong>
+                        </div>
+
+                        {isLive && (
+                          <div className={`ride-progress ${getStatusClass(ride.status)}`} aria-hidden="true">
+                            <span />
+                          </div>
+                        )}
+
+                        <div className="ride-route-lines">
+                          <div>
+                            <span className="timeline-dot pickup-timeline" />
+                            <p>{ride.pickupLocation}</p>
+                          </div>
+                          <div>
+                            <span className="timeline-dot destination-timeline" />
+                            <p>{ride.dropoffLocation}</p>
+                          </div>
+                        </div>
+
+                        <div className="ride-card-footer">
+                          <span className={`status-pill ${getStatusClass(ride.status)}`}>
+                            {formatStatus(ride.status)}
+                          </span>
+                          <span className="ride-message">{getCustomerRideMessage(ride)}</span>
+                        </div>
+
+                        {ride.status === 'CONFIRMED' && ride.driverId && (
+                          <div className="driver-preview">
+                            <span className="driver-avatar" aria-hidden="true">
+                              <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="7" r="3.5" fill="currentColor" /><path d="M3.5 17c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5" fill="currentColor" /></svg>
+                            </span>
+                            <div>
+                              <strong>Your driver is on the way</strong>
+                              <span>Driver details will appear here</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {ride.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            className="cancel-ride-button"
+                            disabled={cancellingRideId === ride.id}
+                            onClick={() => handleCancelRide(ride.id)}
+                          >
+                            {cancellingRideId === ride.id ? 'Cancelling…' : 'Cancel ride'}
+                          </button>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* Account modal */}
       {profileOpen && user && (
         <div
-          className="profile-overlay customer-profile-overlay"
+          className="profile-overlay"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
@@ -754,190 +1117,93 @@ export default function CustomerDashboard({
             aria-modal="true"
             aria-labelledby="customer-profile-title"
           >
-            {/* Header */}
             <div className="customer-profile-header">
-              <div>
-                <span className="customer-profile-kicker">ACCOUNT</span>
-                <h2 id="customer-profile-title">My Profile</h2>
-                <p>Your Jhanvi Cars account</p>
-              </div>
-
+              <h2 id="customer-profile-title">Account</h2>
               <button
                 type="button"
                 className="customer-profile-close"
                 onClick={closeProfile}
                 disabled={profileSaving}
-                aria-label="Close profile"
+                aria-label="Close account"
               >
                 ×
               </button>
             </div>
 
-            {/* Identity */}
             <div className="customer-profile-identity">
-              <div className="customer-profile-avatar">
-                {(user.name || 'C').slice(0, 1).toUpperCase()}
-              </div>
-
-              <div className="customer-profile-identity-copy">
-                <div className="customer-profile-name-row">
-                  <h3>{user.name || 'Customer'}</h3>
-                  <span className="customer-profile-status">
-                    <span />
-                    Active
-                  </span>
-                </div>
-
-                <p>{user.email || 'Customer account'}</p>
-
-                <div className="customer-profile-member">
-                  <span className="customer-profile-member-icon">✓</span>
-                  <span>Jhanvi Cars customer</span>
-                </div>
+              <span className="customer-profile-avatar">{initial}</span>
+              <div>
+                <h3>{user.name || 'Customer'}</h3>
+                <p>{user.email || 'Jhanvi Cars rider'}</p>
               </div>
             </div>
 
-            {/* Quick navigation */}
             <div className="customer-profile-quick-actions">
               <button
                 type="button"
                 onClick={() => {
                   closeProfile();
-                  setShowHistory(true);
+                  openActivity(true);
                 }}
               >
-                <span className="customer-profile-quick-icon">↗</span>
-                <span>
-                  <strong>My rides</strong>
-                  <small>View ride history</small>
-                </span>
-                <span className="customer-profile-chevron">›</span>
+                <strong>Trips</strong>
+                <small>Ride history</small>
               </button>
-
               <button type="button" disabled>
-                <span className="customer-profile-quick-icon">♙</span>
-                <span>
-                  <strong>Account security</strong>
-                  <small>Password & security</small>
-                </span>
-                <span className="customer-profile-soon">Soon</span>
+                <strong>Wallet · ₹0.00</strong>
+                <small>Coming soon</small>
+              </button>
+              <button type="button" disabled>
+                <strong>Security</strong>
+                <small>Coming soon</small>
               </button>
             </div>
 
-            {/* Personal details */}
             <div className="customer-profile-section">
-              <div className="customer-profile-section-heading">
-                <div>
-                  <span className="customer-profile-section-kicker">
-                    PERSONAL
-                  </span>
-                  <h3>Personal details</h3>
-                </div>
-                <span className="customer-profile-edit-label">
-                  Editable
-                </span>
+              <h3>Personal info</h3>
+
+              <div className="customer-profile-field is-readonly">
+                <span>Name</span>
+                <strong>{user.name || 'Not available'}</strong>
               </div>
 
-              <div className="customer-profile-fields">
-                <div className="customer-profile-field customer-profile-field-readonly">
-                  <div className="customer-profile-field-icon">A</div>
-                  <div className="customer-profile-field-content">
-                    <label>Full name</label>
-                    <strong>{user.name || 'Not available'}</strong>
-                  </div>
-                  <span className="customer-profile-lock">Locked</span>
-                </div>
+              <label className="customer-profile-field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(event) => setProfileEmail(event.target.value)}
+                  disabled={profileSaving}
+                  autoComplete="email"
+                />
+              </label>
 
-                <label className="customer-profile-field">
-                  <div className="customer-profile-field-icon">@</div>
-                  <div className="customer-profile-field-content">
-                    <span>Email address</span>
-                    <input
-                      type="email"
-                      value={profileEmail}
-                      onChange={(event) => setProfileEmail(event.target.value)}
-                      disabled={profileSaving}
-                      autoComplete="email"
-                    />
-                  </div>
-                </label>
-
-                <label className="customer-profile-field">
-                  <div className="customer-profile-field-icon">☎</div>
-                  <div className="customer-profile-field-content">
-                    <span>Mobile number</span>
-                    <input
-                      type="tel"
-                      value={profileMobile}
-                      onChange={(event) =>
-                        setProfileMobile(
-                          event.target.value.replace(/\D/g, '').slice(0, 10),
-                        )
-                      }
-                      disabled={profileSaving}
-                      inputMode="numeric"
-                      autoComplete="tel"
-                      maxLength={10}
-                    />
-                  </div>
-                </label>
-              </div>
+              <label className="customer-profile-field">
+                <span>Mobile number</span>
+                <input
+                  type="tel"
+                  value={profileMobile}
+                  onChange={(event) =>
+                    setProfileMobile(
+                      event.target.value.replace(/\D/g, '').slice(0, 10),
+                    )
+                  }
+                  disabled={profileSaving}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={10}
+                />
+              </label>
             </div>
 
-            {/* Wallet */}
-            <div className="customer-profile-wallet">
-              <div className="customer-profile-wallet-top">
-                <div className="customer-profile-wallet-icon">₹</div>
-
-                <div>
-                  <span>JHANVI WALLET</span>
-                  <strong>₹0.00</strong>
-                </div>
-
-                <span className="customer-profile-wallet-badge">
-                  Coming soon
-                </span>
-              </div>
-
-              <div className="customer-profile-wallet-bottom">
-                <span>
-                  Use your wallet for faster and easier ride payments.
-                </span>
-
-                <button type="button" disabled>
-                  Add money
-                </button>
-              </div>
-            </div>
-
-            {/* Messages */}
             {profileError && (
-              <div className="customer-profile-message customer-profile-error" role="alert">
-                <span>!</span>
-                {profileError}
-              </div>
+              <p className="error-text" role="alert">{profileError}</p>
             )}
 
             {profileSuccess && (
-              <div className="customer-profile-message customer-profile-success" role="status">
-                <span>✓</span>
-                {profileSuccess}
-              </div>
+              <p className="success-text" role="status">{profileSuccess}</p>
             )}
 
-            {/* Privacy note */}
-            <div className="customer-profile-privacy">
-              <span className="customer-profile-privacy-icon">✓</span>
-              <div>
-                <strong>Your information is secure</strong>
-                <p>
-                  Your personal details are only used to manage your Jhanvi Cars
-                  account and rides.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
             <div className="customer-profile-footer">
               <button
                 type="button"
@@ -945,7 +1211,7 @@ export default function CustomerDashboard({
                 onClick={closeProfile}
                 disabled={profileSaving}
               >
-                Cancel
+                Close
               </button>
 
               <button
@@ -956,8 +1222,8 @@ export default function CustomerDashboard({
               >
                 {profileSaving ? (
                   <>
-                    <span className="customer-profile-spinner" />
-                    Saving...
+                    <span className="book-spinner" aria-hidden="true" />
+                    Saving…
                   </>
                 ) : (
                   'Save changes'
@@ -967,376 +1233,6 @@ export default function CustomerDashboard({
           </section>
         </div>
       )}
-
-      <main className="customer-content">
-        <section className="booking-card">
-          <div className="booking-heading">
-            <div>
-              <span className="eyebrow">BOOK A RIDE</span>
-
-            </div>
-
-            <button
-              className="location-button"
-              type="button"
-              onClick={handleUseCurrentLocation}
-            >
-              <span>⌖</span>
-              Use current location
-            </button>
-          </div>
-
-          {placesError && <p className="error-text">{placesError}</p>}
-
-          <div className="location-stack">
-            <label className={`location-box ${pickup ? 'has-value' : ''}`}>
-              <span className="location-icon pickup-icon">●</span>
-
-              <span className="location-copy">
-                <small>Pickup</small>
-                <input
-                  ref={pickupInputRef}
-                  placeholder="Where should we pick you up?"
-                  autoComplete="off"
-                  aria-label="Pickup location"
-                />
-                {pickup && (
-                  <span className="location-selected">
-                    {pickup.address}
-                  </span>
-                )}
-              </span>
-
-              {pickup && (
-                <button
-                  className="clear-location"
-                  type="button"
-                  onClick={() => {
-                    setPickup(null);
-                    setRoute(null);
-                    if (pickupInputRef.current) {
-                      pickupInputRef.current.value = '';
-                    }
-                  }}
-                  aria-label="Clear pickup location"
-                  title="Clear pickup location"
-                >
-                  ×
-                </button>
-              )}
-            </label>
-
-            <div className="route-connector">
-              <button
-                className="swap-location"
-                type="button"
-                onClick={handleSwapLocations}
-                disabled={!pickup && !destination}
-                aria-label="Swap pickup and destination"
-                title="Swap pickup and destination"
-              >
-                ⇅
-              </button>
-            </div>
-
-            <label className={`location-box ${destination ? 'has-value' : ''}`}>
-              <span className="location-icon destination-icon">●</span>
-
-              <span className="location-copy">
-                <small>Destination</small>
-                <input
-                  ref={destInputRef}
-                  placeholder="Where are you going?"
-                  autoComplete="off"
-                  aria-label="Destination"
-                />
-                {destination && (
-                  <span className="location-selected">
-                    {destination.address}
-                  </span>
-                )}
-              </span>
-
-              {destination && (
-                <button
-                  className="clear-location"
-                  type="button"
-                  onClick={() => {
-                    setDestination(null);
-                    setRoute(null);
-                    if (destInputRef.current) {
-                      destInputRef.current.value = '';
-                    }
-                  }}
-                  aria-label="Clear destination"
-                  title="Clear destination"
-                >
-                  ×
-                </button>
-              )}
-            </label>
-          </div>
-
-          {routeLoading && (
-            <div className="route-loading">
-              <span className="loading-dot" />
-              Calculating your route…
-            </div>
-          )}
-
-          {routeError && <p className="error-text">{routeError}</p>}
-
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">CHOOSE YOUR RIDE</span>
-              <h2>How would you like to travel?</h2>
-            </div>
-          </div>
-
-          <div className="ride-options">
-            {rideOptions.map((option) => (
-              <button
-                key={option.type}
-                type="button"
-                className={`ride-option ${
-                  rideType === option.type ? 'selected' : ''
-                }`}
-                onClick={() => setRideType(option.type)}
-              >
-                <span className="ride-option-check">
-                  {rideType === option.type ? '✓' : ''}
-                </span>
-                <span className={`ride-option-icon ride-icon-${option.type.toLowerCase()}`}>
-                  <RideIcon type={option.type} />
-                </span>
-                <strong>{option.label}</strong>
-                <span className="ride-subtitle">{option.subtitle}</span>
-                <span className="ride-range">{option.range}</span>
-                <small>{option.eta}</small>
-              </button>
-            ))}
-          </div>
-
-          <div className="fare-summary">
-            <div className="fare-stat">
-              <span className="stat-icon">₹</span>
-              <span>
-                <small>Estimated fare</small>
-                <strong>{fare ? `₹${fare}` : '—'}</strong>
-              </span>
-            </div>
-
-            <div className="stat-divider" />
-
-            <div className="fare-stat">
-              <span className="stat-icon">⌁</span>
-              <span>
-                <small>Distance</small>
-                <strong>{route ? `${route.distanceKm} km` : '—'}</strong>
-              </span>
-            </div>
-
-            <div className="stat-divider" />
-
-            <div className="fare-stat">
-              <span className="stat-icon">◷</span>
-              <span>
-                <small>Est. time</small>
-                <strong>{route ? `${route.durationMin} min` : '—'}</strong>
-              </span>
-            </div>
-          </div>
-
-          {bookError && <p className="error-text">{bookError}</p>}
-
-          <button
-            className={`primary-book-button ${booking ? 'is-booking' : ''}`}
-            disabled={!route || routeLoading || booking}
-            onClick={handleBook}
-          >
-            {booking ? (
-              <>
-                <span className="book-spinner" aria-hidden="true" />
-                <span>Booking your ride…</span>
-              </>
-            ) : (
-              <>
-                <span>
-                  {fare
-                    ? `Book ${rideOptions.find((option) => option.type === rideType)?.label ?? 'ride'} · ₹${fare}`
-                    : 'Book ride'}
-                </span>
-                <span className="book-arrow" aria-hidden="true">→</span>
-              </>
-            )}
-          </button>
-
-          {!user && (
-            <p className="booking-login-note">
-              You can plan your ride first. <button onClick={onRequireAuth}>Log in</button> when you are ready to book.
-            </p>
-          )}
-        </section>
-
-        <section className="map-card">
-          <div className="map-card-header">
-            <div>
-              <span className="eyebrow">LIVE ROUTE</span>
-              <h2>Your journey</h2>
-            </div>
-
-            {route && (
-              <div className="map-route-meta">
-                <strong>{route.distanceKm} km</strong>
-                <span>•</span>
-                <strong>{route.durationMin} min</strong>
-              </div>
-            )}
-          </div>
-
-          <div className="map-frame">
-            <GoogleRideMap
-              pickup={pickup}
-              destination={destination}
-              route={route}
-            />
-
-            {route && (
-              <div className="map-floating-summary">
-                <span className="map-car">🚗</span>
-                <span>
-                  <strong>{route.distanceKm} km · {route.durationMin} mins</strong>
-                  <small>Fastest available route</small>
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <aside className="rides-column">
-          <div className="rides-column-header">
-            <div>
-              <span className="eyebrow">
-                {showHistory ? 'PAST TRIPS' : 'YOUR JOURNEYS'}
-              </span>
-              <h2>{showHistory ? 'Ride History' : `Active Rides (${activeRides.length})`}</h2>
-            </div>
-
-            {user && (
-              <button
-                className="view-all-button"
-                onClick={() => setShowHistory(!showHistory)}
-              >
-                {showHistory ? 'Active rides' : 'View history'} →
-              </button>
-            )}
-          </div>
-
-          {!user ? (
-            <div className="guest-rides-card">
-              <div className="guest-rides-icon">🚘</div>
-              <h3>Your rides will appear here</h3>
-              <p>Log in after choosing your route to book and track your rides.</p>
-              <button onClick={onRequireAuth}>Log in to continue</button>
-            </div>
-          ) : ridesLoading ? (
-            <div className="empty-rides">
-              <span className="spinner" />
-              Loading your rides…
-            </div>
-          ) : ridesError ? (
-            <div className="empty-rides error-state">{ridesError}</div>
-          ) : visibleRides.length === 0 ? (
-            <div className="empty-rides">
-              <span className="empty-icon">{showHistory ? '🧾' : '🚗'}</span>
-              <strong>{showHistory ? 'No ride history yet' : 'No active rides'}</strong>
-              <p>
-                {showHistory
-                  ? 'Your completed trips will appear here.'
-                  : 'Book a ride and we will track it here.'}
-              </p>
-            </div>
-          ) : (
-            <div className="ride-list">
-              {visibleRides.map((ride) => (
-                <article key={ride.id} className="customer-ride-card">
-                  <div className={`ride-status ${getStatusClass(ride.status)}`}>
-                    <span className="status-dot" />
-                    <strong>{formatStatus(ride.status)}</strong>
-                    {ride.status === 'PENDING' && (
-                      <button
-                        type="button"
-                        className="cancel-look"
-                        aria-label="Cancel ride"
-                        disabled={cancellingRideId === ride.id}
-                        onClick={() => handleCancelRide(ride.id)}
-                      >
-                        {cancellingRideId === ride.id ? 'Cancelling…' : 'Cancel'}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="ride-card-main">
-                    <div className="ride-vehicle-icon">
-                      {getRideVehicleIcon(ride.vehicleType)}
-                    </div>
-
-                    <div className="ride-card-title">
-                      <strong>
-                        {ride.status === 'PENDING'
-                          ? 'Finding a driver…'
-                          : ride.status === 'CONFIRMED'
-                            ? ride.driverId
-                              ? 'Driver accepted'
-                              : 'Confirming driver assignment…'
-                            : ride.status === 'ONGOING'
-                              ? 'Ride in progress'
-                              : formatStatus(ride.status)}
-                      </strong>
-                      <span>
-                        {new Date(ride.scheduledAt).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-
-                    <strong className="ride-price">₹{ride.fare}</strong>
-                  </div>
-
-                  <div className="ride-route-lines">
-                    <div>
-                      <span className="timeline-dot pickup-timeline" />
-                      <p>{ride.pickupLocation}</p>
-                    </div>
-                    <div>
-                      <span className="timeline-dot destination-timeline" />
-                      <p>{ride.dropoffLocation}</p>
-                    </div>
-                  </div>
-
-                  <div className="ride-message">
-                    {getCustomerRideMessage(ride)}
-                  </div>
-
-                  {ride.status === 'CONFIRMED' && ride.driverId && (
-                    <div className="driver-preview">
-                      <div className="driver-avatar">D</div>
-                      <div>
-                        <strong>Your driver is on the way</strong>
-                        <span>Driver details will appear here</span>
-                      </div>
-                      <span className="driver-call">☎</span>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-        </aside>
-      </main>
     </div>
   );
 }

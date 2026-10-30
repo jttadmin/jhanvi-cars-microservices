@@ -41,7 +41,12 @@ export default function App() {
   }
 
   if (checkingSession) {
-    return <div className="app-loading">Loading…</div>;
+    return (
+      <div className="app-loading" role="status">
+        <span className="app-loading-spinner" aria-hidden="true" />
+        Loading…
+      </div>
+    );
   }
 
   if (isAdminPath) {
@@ -112,7 +117,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer />
+      {user?.role === 'DRIVER' && <Footer />}
     </div>
   );
 

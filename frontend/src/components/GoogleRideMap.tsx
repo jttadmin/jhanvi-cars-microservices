@@ -10,16 +10,25 @@ interface GoogleRideMapProps {
 
 const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 }; // fallback until a pickup point is set
 
+// Muted grayscale map so the route and markers stand out (Uber-style).
 const MAP_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#f3efe4' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#5b6070' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#fbf9f4' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e7e1d2' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ffe6ab' }] },
+  { elementType: 'geometry', stylers: [{ color: '#f2f2f2' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#6b6b6b' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f8f8f8' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#ebebeb' }] },
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ visibility: 'on' }, { color: '#dfeedd' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e3e3e3' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dadada' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { featureType: 'road.local', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9e4dc' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9d6e2' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
 ];
 
 export default function GoogleRideMap({ pickup, destination, route }: GoogleRideMapProps) {
@@ -45,6 +54,9 @@ export default function GoogleRideMap({ pickup, destination, route }: GoogleRide
           zoom: 13,
           disableDefaultUI: true,
           zoomControl: true,
+          zoomControlOptions: { position: googleNs.maps.ControlPosition.RIGHT_BOTTOM },
+          clickableIcons: false,
+          gestureHandling: 'greedy',
           styles: MAP_STYLE,
         });
         setReady(true);
@@ -71,11 +83,11 @@ export default function GoogleRideMap({ pickup, destination, route }: GoogleRide
         map: mapRef.current,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 7,
-          fillColor: '#1f6f5c',
+          scale: 8,
+          fillColor: '#ffffff',
           fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: '#fff',
+          strokeWeight: 5,
+          strokeColor: '#000000',
         },
       });
     }
@@ -95,12 +107,12 @@ export default function GoogleRideMap({ pickup, destination, route }: GoogleRide
       destMarkerRef.current = new google.maps.Marker({
         map: mapRef.current,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 7,
-          fillColor: '#14171f',
+          path: 'M -7 -7 L 7 -7 L 7 7 L -7 7 Z',
+          scale: 1,
+          fillColor: '#000000',
           fillOpacity: 1,
-          strokeWeight: 2,
-          strokeColor: '#fff',
+          strokeWeight: 3,
+          strokeColor: '#ffffff',
         },
       });
     }
@@ -120,14 +132,20 @@ export default function GoogleRideMap({ pickup, destination, route }: GoogleRide
     routeLineRef.current = new google.maps.Polyline({
       path,
       map: mapRef.current,
-      strokeColor: '#ffc53d',
+      strokeColor: '#000000',
       strokeWeight: 5,
-      strokeOpacity: 0.95,
+      strokeOpacity: 1,
     });
 
     const bounds = new google.maps.LatLngBounds();
     path.forEach((point) => bounds.extend(point));
-    mapRef.current.fitBounds(bounds, 60);
+    const desktop = window.matchMedia('(min-width: 768px)').matches;
+    mapRef.current.fitBounds(
+      bounds,
+      desktop
+        ? { top: 80, right: 80, bottom: 80, left: 480 } // keep clear of the booking panel
+        : { top: 40, right: 40, bottom: 40, left: 40 },
+    );
   }, [route]);
 
   return (
