@@ -22,7 +22,7 @@ export interface FareRule {
  * calculates the fare that is actually charged.
  */
 export const DEFAULT_FARE_RULES: Record<RideType, FareRule> = {
-  AUTO: { vehicleType: 'AUTO', minFare: 36, minKm: 2, perKm: 18, nightStart: '22:00', nightEnd: '05:00', nightSurchargePercent: 50, gstPercent: 0 },
+  AUTO: { vehicleType: 'AUTO', minFare: 36, minKm: 2, perKm: 18, nightStart: '22:00', nightEnd: '05:00', nightSurchargePercent: 50, gstPercent: 5 },
   ECONOMY: { vehicleType: 'ECONOMY', minFare: 100, minKm: 4, perKm: 24, nightStart: '00:00', nightEnd: '06:00', nightSurchargePercent: 10, gstPercent: 5 },
   COMFORT: { vehicleType: 'COMFORT', minFare: 115, minKm: 4, perKm: 28, nightStart: '00:00', nightEnd: '06:00', nightSurchargePercent: 10, gstPercent: 5 },
   COMFORT_PLUS: { vehicleType: 'COMFORT_PLUS', minFare: 130, minKm: 4, perKm: 32, nightStart: '00:00', nightEnd: '06:00', nightSurchargePercent: 10, gstPercent: 5 },

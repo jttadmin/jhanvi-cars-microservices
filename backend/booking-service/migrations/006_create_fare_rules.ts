@@ -10,6 +10,7 @@ const schema = () => process.env.DB_SCHEMA ?? "booking_schema";
  *   midnight to 6 am, 5% GST may be collected, surge pricing not allowed.
  * - Autos, Bengaluru, effective 1 Aug 2025: Rs 36 for the first 2 km,
  *   Rs 18/km after, 1.5x from 10 pm to 5 am.
+ * - GST: 5% on cab and auto rides booked through an app.
  * Admins can change every value from the admin portal when rates are revised.
  */
 const DEFAULTS = [
@@ -21,7 +22,8 @@ const DEFAULTS = [
     night_start: "22:00",
     night_end: "05:00",
     night_surcharge_percent: 50,
-    gst_percent: 0,
+    // 5% GST on autos booked through an app since 1 Jan 2022.
+    gst_percent: 5,
     source: "Karnataka auto fare notification, effective 1 Aug 2025 (Bengaluru)",
   },
   {

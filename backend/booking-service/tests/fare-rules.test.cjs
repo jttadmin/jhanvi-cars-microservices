@@ -10,7 +10,7 @@ const { BookingError } = require("../src/errors/BookingError");
 
 // Karnataka defaults, as seeded by migration 006.
 const RULES = {
-  AUTO: { vehicleType: "AUTO", minFare: 36, minKm: 2, perKm: 18, nightStart: "22:00", nightEnd: "05:00", nightSurchargePercent: 50, gstPercent: 0 },
+  AUTO: { vehicleType: "AUTO", minFare: 36, minKm: 2, perKm: 18, nightStart: "22:00", nightEnd: "05:00", nightSurchargePercent: 50, gstPercent: 5 },
   ECONOMY: { vehicleType: "ECONOMY", minFare: 100, minKm: 4, perKm: 24, nightStart: "00:00", nightEnd: "06:00", nightSurchargePercent: 10, gstPercent: 5 },
   COMFORT: { vehicleType: "COMFORT", minFare: 115, minKm: 4, perKm: 28, nightStart: "00:00", nightEnd: "06:00", nightSurchargePercent: 10, gstPercent: 5 },
   COMFORT_PLUS: { vehicleType: "COMFORT_PLUS", minFare: 130, minKm: 4, perKm: 32, nightStart: "00:00", nightEnd: "06:00", nightSurchargePercent: 10, gstPercent: 5 },
@@ -22,13 +22,13 @@ const NIGHT_1AM = new Date("2026-11-04T01:00:00+05:30");
 const NIGHT_11PM = new Date("2026-11-03T23:00:00+05:30");
 
 test("trips inside the minimum distance pay only the minimum fare (+GST)", () => {
-  assert.equal(calculateFare(RULES.AUTO, 1.5, DAY).total, 36);
+  assert.equal(calculateFare(RULES.AUTO, 1.5, DAY).total, 38); // 36 + 5% = 37.8
   assert.equal(calculateFare(RULES.ECONOMY, 3, DAY).total, 105); // 100 + 5%
 });
 
 test("per-km charge applies only beyond the minimum distance", () => {
-  // AUTO 10 km: 36 + 8 x 18 = 180
-  assert.equal(calculateFare(RULES.AUTO, 10, DAY).total, 180);
+  // AUTO 10 km: 36 + 8 x 18 = 180, +5% GST = 189
+  assert.equal(calculateFare(RULES.AUTO, 10, DAY).total, 189);
   // ECONOMY 10 km: (100 + 6 x 24) = 244, +5% GST = 256.2 -> 256
   const q = calculateFare(RULES.ECONOMY, 10, DAY);
   assert.equal(q.distanceFare, 144);
@@ -45,8 +45,8 @@ test("night surcharge uses India time and windows that cross midnight", () => {
   assert.equal(isNightTime(RULES.ECONOMY, NIGHT_11PM), false);
   assert.equal(isNightTime(RULES.ECONOMY, NIGHT_1AM), true);
 
-  // AUTO 10 km at night: 180 x 1.5 = 270
-  assert.equal(calculateFare(RULES.AUTO, 10, NIGHT_11PM).total, 270);
+  // AUTO 10 km at night: 180 x 1.5 = 270, +5% = 283.5 -> 284
+  assert.equal(calculateFare(RULES.AUTO, 10, NIGHT_11PM).total, 284);
   // ECONOMY 10 km at 1 am: 244 + 10% = 268.4, +5% = 281.82 -> 282
   assert.equal(calculateFare(RULES.ECONOMY, 10, NIGHT_1AM).total, 282);
 });
@@ -124,6 +124,6 @@ test("quotes come back for every category in order", async () => {
   const quotes = await fareService().quoteAll(10, DAY);
   assert.deepEqual(
     quotes.map((q) => [q.vehicleType, q.total]),
-    [["AUTO", 180], ["ECONOMY", 256], ["COMFORT", 297], ["COMFORT_PLUS", 338]]
+    [["AUTO", 189], ["ECONOMY", 256], ["COMFORT", 297], ["COMFORT_PLUS", 338]]
   );
 });
