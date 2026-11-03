@@ -116,7 +116,8 @@ async function patchJson(
 async function patchRequiredJson(
   url: string,
   body: unknown,
-  serviceName: string
+  serviceName: string,
+  tolerateConflictCodes: string[] = []
 ): Promise<any> {
   let response: Response;
 
@@ -130,6 +131,27 @@ async function patchRequiredJson(
     throw new BookingError(
       503,
       `${serviceName} is unavailable`
+    );
+  }
+
+  if (
+    response.status === 409 &&
+    tolerateConflictCodes.length > 0
+  ) {
+    const errorBody = await response
+      .json()
+      .catch(() => ({} as any));
+
+    if (tolerateConflictCodes.includes(errorBody?.code)) {
+      // Nothing to update on the remote side (e.g. the booking was
+      // accepted directly, so no ride request exists). Not an error.
+      return null;
+    }
+
+    throw new BookingError(
+      409,
+      errorBody?.message ??
+        `${serviceName} returned HTTP 409`
     );
   }
 
@@ -307,7 +329,13 @@ export async function syncDriverVehicleForBooking(
     await patchRequiredJson(
       `${driverBaseUrl}/drivers/ride-requests/${lifecyclePath}`,
       { bookingId, driverId: driver.id },
-      "Driver Service"
+      "Driver Service",
+      // Bookings accepted via PATCH /bookings/:id/accept never get an
+      // ACCEPTED ride request, so there is nothing to close here.
+      [
+        "RIDE_REQUEST_NOT_COMPLETABLE",
+        "RIDE_REQUEST_NOT_CANCELLABLE"
+      ]
     );
 
     await patchJson(
