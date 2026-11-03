@@ -5,7 +5,8 @@ import type { RideType } from '../utils/fare';
 export async function createBooking(input: {
   pickupLocation: string;
   dropoffLocation: string;
-  fare: number;
+  /** Trip distance; the server works out the fare from it. */
+  distanceKm: number;
   scheduledAt: string;
   vehicleType: RideType;
 }): Promise<Booking> {

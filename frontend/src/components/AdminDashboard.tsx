@@ -19,9 +19,10 @@ import { getAdminBookings, updateAdminBookingStatus } from '../api/adminBookings
 import type { AdminBooking, BookingStatus } from '../api/adminBookings';
 import { getAdminPayments } from '../api/adminPayments';
 import type { AdminPayment, PaymentStatus } from '../api/adminPayments';
+import AdminFares from './AdminFares';
 import './AdminDashboard.css';
 
-type Tab = 'overview' | 'vehicles' | 'drivers' | 'bookings' | 'payments';
+type Tab = 'overview' | 'vehicles' | 'drivers' | 'bookings' | 'payments' | 'fares';
 
 const VEHICLE_TYPES: VehicleType[] = [
   'AUTO', 'SEDAN', 'SUV', 'HATCHBACK', 'LUXURY', 'MUV',
@@ -343,6 +344,7 @@ export default function AdminDashboard({
         <button className={activeTab === 'drivers' ? 'admin-nav active' : 'admin-nav'} onClick={() => openTab('drivers')}><span>♙</span> Drivers</button>
         <button className={activeTab === 'bookings' ? 'admin-nav active' : 'admin-nav'} onClick={() => openTab('bookings')}><span>▤</span> Bookings</button>
         <button className={activeTab === 'payments' ? 'admin-nav active' : 'admin-nav'} onClick={() => openTab('payments')}><span>₹</span> Payments</button>
+        <button className={activeTab === 'fares' ? 'admin-nav active' : 'admin-nav'} onClick={() => openTab('fares')}><span>⚖</span> Fares</button>
         <div className="admin-sidebar-bottom">
           <span className="admin-avatar">A</span>
           <div className="admin-account"><strong>Administrator</strong><small>Fleet manager</small></div>
@@ -361,7 +363,7 @@ export default function AdminDashboard({
         <header className="admin-topbar">
           <div>
             <span className="admin-eyebrow">JHANVI CARS / ADMIN</span>
-            <h1>{activeTab === 'overview' ? 'Fleet overview' : activeTab === 'vehicles' ? 'Vehicle management' : activeTab === 'drivers' ? 'Driver management' : activeTab === 'bookings' ? 'Booking management' : 'Payment management'}</h1>
+            <h1>{activeTab === 'overview' ? 'Fleet overview' : activeTab === 'vehicles' ? 'Vehicle management' : activeTab === 'drivers' ? 'Driver management' : activeTab === 'bookings' ? 'Booking management' : activeTab === 'fares' ? 'Fare management' : 'Payment management'}</h1>
           </div>
           <button type="button" className="admin-refresh" onClick={() => void loadData()} disabled={loading}>
             {loading ? 'Loading…' : '↻ Refresh'}
@@ -499,6 +501,8 @@ export default function AdminDashboard({
             )}
           </section>
         )}
+
+        {activeTab === 'fares' && <AdminFares />}
 
         {activeTab === 'payments' && (
           <section className="admin-panel">

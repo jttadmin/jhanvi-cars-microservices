@@ -13,7 +13,8 @@ import {
   loadRazorpayCheckout,
   type RazorpayResponse,
 } from '../utils/razorpay';
-import { estimateFare, type RideType } from '../utils/fare';
+import { DEFAULT_FARE_RULES, estimateFare, rulesByType, type FareRule, type RideType } from '../utils/fare';
+import { getFareRules } from '../api/fares';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
 import { updateProfile } from '../api/auth';
@@ -158,6 +159,16 @@ export default function CustomerDashboard({
   const [bookError, setBookError] = useState<string | null>(null);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  // Admin-managed rates; Karnataka defaults until the live ones load.
+  const [fareRules, setFareRules] = useState<Record<RideType, FareRule>>(DEFAULT_FARE_RULES);
+
+  useEffect(() => {
+    getFareRules()
+      .then((list) => setFareRules(rulesByType(list)))
+      .catch(() => {
+        /* keep defaults; the server still prices the booking */
+      });
+  }, []);
   const [ridesLoading, setRidesLoading] = useState(true);
   const [ridesError, setRidesError] = useState<string | null>(null);
   const [rideType, setRideType] = useState<RideType>('ECONOMY');
@@ -437,8 +448,6 @@ export default function CustomerDashboard({
     setBookError(null);
 
     try {
-      const fareAmount = estimateFare(route, rideType);
-
       /*
        * Step 1:
        * Create the booking first.
@@ -446,7 +455,7 @@ export default function CustomerDashboard({
       const createdBooking = await createBooking({
         pickupLocation: pickup.address,
         dropoffLocation: destination.address,
-        fare: fareAmount,
+        distanceKm: Math.round(route.distanceKm * 100) / 100,
         scheduledAt: new Date().toISOString(),
         vehicleType: rideType,
       });
@@ -458,7 +467,8 @@ export default function CustomerDashboard({
       const payment = await createPayment({
         bookingId: createdBooking.id,
         userId: user.id,
-        amount: fareAmount,
+        // The server-calculated fare; payment-service checks they match.
+        amount: createdBooking.fare,
         currency: 'INR',
         method: 'UPI',
       });
@@ -578,7 +588,7 @@ export default function CustomerDashboard({
     }
   }
 
-  const fare = route ? estimateFare(route, rideType) : null;
+  const fare = route ? estimateFare(route, rideType, fareRules) : null;
   const activeRides = bookings.filter(
     (b) => b.status !== 'COMPLETED' && b.status !== 'CANCELLED',
   );
@@ -905,7 +915,7 @@ export default function CustomerDashboard({
 
               <div className="ride-options" role="radiogroup" aria-label="Ride type">
                 {rideOptions.map((option) => {
-                  const optionFare = route ? estimateFare(route, option.type) : null;
+                  const optionFare = route ? estimateFare(route, option.type, fareRules) : null;
                   const selected = rideType === option.type;
 
                   return (

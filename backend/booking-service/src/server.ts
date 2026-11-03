@@ -29,6 +29,9 @@ import {
 import {
   errorHandler
 } from "./middleware/errorHandler";
+import { FareRuleRepository } from "./repositories/fareRuleRepository";
+import { FareService } from "./services/fareService";
+import { FareController } from "./controllers/fareController";
 
 const app =
   express();
@@ -40,9 +43,15 @@ app.use(
 const repository =
   new BookingRepository(db);
 
+const fareService =
+  new FareService(
+    new FareRuleRepository(db)
+  );
+
 const service =
   new BookingService(
-    repository
+    repository,
+    fareService
   );
 
 const ratingRepository =
@@ -105,10 +114,21 @@ app.get(
   }
 );
 
+const fareController =
+  new FareController(fareService);
+
+// Public: current fare rates (no auth) so estimates work before login.
+app.get(
+  "/bookings/fare-rules",
+  (req, res, next) =>
+    fareController.getRules(req, res).catch(next)
+);
+
 app.use(
   "/bookings",
   createBookingRoutes(
-    controller
+    controller,
+    fareController
   )
 );
 

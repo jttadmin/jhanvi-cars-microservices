@@ -733,3 +733,37 @@
     flex-wrap: wrap;
   }
 }
+
+/* Fares */
+
+.admin-fare-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.admin-fare-example {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.admin-fare-example b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-fare-form .admin-fare-source {
+  grid-column: 1 / -1;
+}
+
+.admin-fare-form .admin-form-actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-fare-updated {
+  margin-left: auto;
+  font-size: 13px;
+}

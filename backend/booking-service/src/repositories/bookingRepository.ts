@@ -54,7 +54,13 @@ export class BookingRepository {
         Number(row.fare),
 
       vehicleType:
-        row.vehicle_type ?? undefined
+        row.vehicle_type ?? undefined,
+
+      distanceKm:
+        row.distance_km === null ||
+        row.distance_km === undefined
+          ? null
+          : Number(row.distance_km)
     };
   }
 
@@ -197,6 +203,8 @@ export class BookingRepository {
 
           vehicle_type:
             booking.vehicleType ?? null,
+          distance_km:
+            booking.distanceKm ?? null,
           start_otp:
             booking.startOtp ?? null,
           start_otp_attempts: 0
@@ -248,6 +256,9 @@ export class BookingRepository {
 
           vehicle_type:
             booking.vehicleType ?? null,
+
+          distance_km:
+            booking.distanceKm ?? null,
 
           updated_at:
             this.db.fn.now()

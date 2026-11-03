@@ -11,12 +11,17 @@ import {
 } from "../middleware/asyncHandler";
 
 import {
+  FareController
+} from "../controllers/fareController";
+
+import {
   requireAuth,
   requireInternalService
 } from "../middleware/auth.middleware";
 
 export function createBookingRoutes(
-  controller: BookingController
+  controller: BookingController,
+  fareController?: FareController
 ): Router {
 
   const router =
@@ -99,6 +104,24 @@ export function createBookingRoutes(
       controller.createDriverRating
     )
   );
+
+  if (fareController) {
+    // Must be registered before "/:id".
+    router.get(
+      "/fare-rules",
+      asyncHandler(fareController.getRules)
+    );
+
+    router.put(
+      "/fare-rules/:vehicleType",
+      asyncHandler(fareController.updateRule)
+    );
+
+    router.post(
+      "/fare-quote",
+      asyncHandler(fareController.quote)
+    );
+  }
 
   router.get(
     "/:id",

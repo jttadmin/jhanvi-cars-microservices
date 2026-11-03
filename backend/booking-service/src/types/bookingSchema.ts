@@ -48,8 +48,13 @@ export const createBookingSchema =
         .optional()
         .default("PENDING"),
 
+    // Customers send distanceKm; the server works out the fare from the
+    // admin-managed fare rules. A fare sent by a customer is ignored.
+    distanceKm:
+      z.number().finite().positive().max(5000).optional(),
+
     fare:
-      z.number().nonnegative(),
+      z.number().nonnegative().optional(),
 
     vehicleType:
       vehicleTypeSchema
