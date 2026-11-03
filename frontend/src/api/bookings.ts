@@ -27,8 +27,8 @@ export async function acceptBooking(id: string): Promise<Booking> {
   return apiRequest<Booking>(`/bookings/${id}/accept`, { method: 'PATCH' });
 }
 
-export async function startBooking(id: string): Promise<Booking> {
-  return apiRequest<Booking>(`/bookings/${id}/start`, { method: 'PATCH' });
+export async function startBooking(id: string, otp: string): Promise<Booking> {
+  return apiRequest<Booking>(`/bookings/${id}/start`, { method: 'PATCH', body: { otp } });
 }
 
 export async function completeBooking(id: string): Promise<Booking> {

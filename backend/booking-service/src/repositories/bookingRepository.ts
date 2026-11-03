@@ -196,7 +196,10 @@ export class BookingRepository {
             booking.fare,
 
           vehicle_type:
-            booking.vehicleType ?? null
+            booking.vehicleType ?? null,
+          start_otp:
+            booking.startOtp ?? null,
+          start_otp_attempts: 0
         })
         .returning("*");
 
@@ -290,6 +293,87 @@ export class BookingRepository {
       .returning("*");
 
     return row ? this.mapBooking(row) : undefined;
+  }
+
+  /*
+   * Start-ride OTP. Deliberately not part of mapBooking, so the code is
+   * only ever returned to the customer who owns the booking.
+   */
+  async getStartOtps(
+    ids: string[]
+  ): Promise<Map<string, string>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.db("bookings")
+      .whereIn("id", ids)
+      .whereNotNull("start_otp")
+      .select("id", "start_otp");
+
+    return new Map(
+      rows.map((row) => [String(row.id), String(row.start_otp)])
+    );
+  }
+
+  async setStartOtp(
+    id: string,
+    otp: string
+  ): Promise<void> {
+    await this.db("bookings")
+      .where({ id })
+      .update({
+        start_otp: otp,
+        start_otp_attempts: 0,
+        updated_at: this.db.fn.now()
+      });
+  }
+
+  /*
+   * Checks the code under a row lock. Returns "OK" on a match,
+   * "WRONG" on a mismatch, or "ROTATED" when the attempt limit is
+   * reached and a fresh code has been issued to the customer.
+   */
+  async checkStartOtp(
+    id: string,
+    otp: string,
+    maxAttempts: number,
+    newOtp: () => string
+  ): Promise<"OK" | "WRONG" | "ROTATED" | "MISSING"> {
+    return this.db.transaction(async (trx) => {
+      const row = await trx("bookings")
+        .where({ id })
+        .forUpdate()
+        .first("start_otp", "start_otp_attempts");
+
+      if (!row || !row.start_otp) {
+        return "MISSING";
+      }
+
+      if (row.start_otp === otp) {
+        return "OK";
+      }
+
+      const attempts = Number(row.start_otp_attempts ?? 0) + 1;
+
+      if (attempts >= maxAttempts) {
+        await trx("bookings")
+          .where({ id })
+          .update({
+            start_otp: newOtp(),
+            start_otp_attempts: 0,
+            updated_at: trx.fn.now()
+          });
+
+        return "ROTATED";
+      }
+
+      await trx("bookings")
+        .where({ id })
+        .update({ start_otp_attempts: attempts });
+
+      return "WRONG";
+    });
   }
 
 }

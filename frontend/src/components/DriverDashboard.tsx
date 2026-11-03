@@ -29,6 +29,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
   const [ridesError, setRidesError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Start-ride OTP typed by the driver, per booking.
+  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<'assigned' | 'history'>('assigned');
 
   useEffect(() => {
@@ -202,7 +204,8 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       }
 
       if (action === 'start') {
-        await startBooking(id);
+        await startBooking(id, otpInputs[id] ?? '');
+        setOtpInputs(({ [id]: _done, ...rest }) => rest);
         setIsAvailable(false);
         setDriverProfile((current) =>
           current ? { ...current, isAvailable: false } : current
@@ -285,10 +288,37 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
         {next && (
           <div className="ride-actions">
+            {next.action === 'start' && (
+              <label className="ride-otp">
+                <span>Ask the customer for their 4-digit ride OTP</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  placeholder="• • • •"
+                  aria-label="Customer ride OTP"
+                  value={otpInputs[ride.id] ?? ''}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setOtpInputs((current) => ({ ...current, [ride.id]: digits }));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (otpInputs[ride.id] ?? '').length === 4) {
+                      handleAction(ride.id, 'start');
+                    }
+                  }}
+                />
+              </label>
+            )}
             <button
               type="button"
               className={`ride-action-${next.action}`}
-              disabled={actionLoadingId === ride.id}
+              disabled={
+                actionLoadingId === ride.id ||
+                (next.action === 'start' && (otpInputs[ride.id] ?? '').length !== 4)
+              }
               onClick={() => handleAction(ride.id, next.action)}
             >
               {next.label}

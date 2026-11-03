@@ -37,6 +37,8 @@ export interface Booking {
   customerId?: string;
   driverId?: string;
   createdAt?: string;
+  /** Start-ride code; only present for the customer who booked. */
+  startOtp?: string | null;
 }
 
 export interface RouteResult {
