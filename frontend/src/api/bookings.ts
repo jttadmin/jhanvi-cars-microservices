@@ -116,3 +116,17 @@ export async function getBookingsWithRefundStatus(): Promise<Booking[]> {
     })
   );
 }
+
+export interface RideTracking {
+  bookingId: string;
+  status: Booking['status'];
+  vehicleType: RideType | null;
+  pickup: { lat: number; lng: number } | null;
+  driver: { name: string; vehicleNumber: string; vehicleModel: string | null };
+  location: { lat: number; lng: number; updatedAt: string | null; stale: boolean } | null;
+}
+
+/** The driver's live position on the customer's confirmed or ongoing ride. */
+export async function getRideTracking(id: string): Promise<RideTracking> {
+  return apiRequest<RideTracking>(`/bookings/${id}/tracking`);
+}

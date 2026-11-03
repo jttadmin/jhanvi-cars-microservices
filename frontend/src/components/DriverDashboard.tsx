@@ -120,8 +120,16 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
     }
   }
 
+  // Keep sharing location on an accepted or ongoing ride too, so the
+  // customer can follow the driver live. Drivers turn unavailable once
+  // they accept, which used to stop the updates mid-trip.
+  const hasActiveRide = bookings.some(
+    (b) => b.status === 'CONFIRMED' || b.status === 'ONGOING'
+  );
+  const shareLocation = isAvailable || hasActiveRide;
+
   useEffect(() => {
-    if (!isAvailable) {
+    if (!shareLocation) {
       setLocationTracking(false);
       return;
     }
@@ -173,7 +181,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       setLocationTracking(false);
       setLocationError(
         error.code === error.PERMISSION_DENIED
-          ? 'Location permission is required while you are online.'
+          ? 'Location permission is required while you are online or on a ride.'
           : 'Could not determine your current location.'
       );
     };
@@ -193,7 +201,7 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
       navigator.geolocation.clearWatch(watchId);
       setLocationTracking(false);
     };
-  }, [isAvailable]);
+  }, [shareLocation]);
 
   async function handleAction(id: string, action: 'accept' | 'start' | 'complete') {
     setActionLoadingId(id);
@@ -205,7 +213,11 @@ export default function DriverDashboard({ user, onLogout }: DriverDashboardProps
 
       if (action === 'start') {
         await startBooking(id, otpInputs[id] ?? '');
-        setOtpInputs(({ [id]: _done, ...rest }) => rest);
+        setOtpInputs((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
         setIsAvailable(false);
         setDriverProfile((current) =>
           current ? { ...current, isAvailable: false } : current

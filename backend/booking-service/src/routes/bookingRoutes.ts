@@ -124,6 +124,13 @@ export function createBookingRoutes(
   }
 
   router.get(
+    "/:id/tracking",
+    asyncHandler(
+      controller.getRideTracking
+    )
+  );
+
+  router.get(
     "/:id",
     asyncHandler(
       controller.getBookingById

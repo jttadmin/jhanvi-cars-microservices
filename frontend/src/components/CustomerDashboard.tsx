@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import BrandMark from './BrandMark';
 import { RideIcon } from './RideIcons';
-import GoogleRideMap from './GoogleRideMap';
+import GoogleRideMap, { type LiveDriver } from './GoogleRideMap';
 import { loadGoogleMaps, attachAutocomplete, computeRoute } from '../api/googleMaps';
-import { cancelBooking, createBooking, getBookingsWithRefundStatus } from '../api/bookings';
+import { cancelBooking, createBooking, getBookingsWithRefundStatus, getRideTracking, type RideTracking } from '../api/bookings';
 import {
   createPayment,
   createRazorpayOrder,
@@ -693,6 +693,47 @@ export default function CustomerDashboard({
   const selectedOption =
     rideOptions.find((option) => option.type === rideType) ?? rideOptions[1];
   const liveRide = activeRides[0];
+  const trackedRideId =
+    liveRide && liveRide.driverId && (liveRide.status === 'CONFIRMED' || liveRide.status === 'ONGOING')
+      ? liveRide.id
+      : null;
+
+  // Live tracking: follow the assigned driver until the ride ends.
+  const [tracking, setTracking] = useState<RideTracking | null>(null);
+
+  useEffect(() => {
+    if (!trackedRideId) return;
+
+    let active = true;
+    const poll = () => {
+      if (document.visibilityState !== 'visible') return;
+      getRideTracking(trackedRideId)
+        .then((data) => {
+          if (active) setTracking(data);
+        })
+        .catch(() => {
+          /* keep the last known position; the next poll retries */
+        });
+    };
+
+    poll();
+    const timer = window.setInterval(poll, 4000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [trackedRideId]);
+
+  const liveTracking = tracking && tracking.bookingId === trackedRideId ? tracking : null;
+  const liveDriver: LiveDriver | null = liveTracking?.location
+    ? { lat: liveTracking.location.lat, lng: liveTracking.location.lng, vehicleType: liveTracking.vehicleType }
+    : null;
+  // Show the pickup point while the driver is on the way, unless a new trip is being planned.
+  const mapPickup: LocationPoint | null =
+    pickup ??
+    (liveTracking?.status === 'CONFIRMED' && liveTracking.pickup
+      ? { ...liveTracking.pickup, address: liveRide?.pickupLocation ?? '' }
+      : null);
   const initial = (user?.name || 'C').slice(0, 1).toUpperCase();
 
   const openActivity = (history: boolean) => {
@@ -706,10 +747,32 @@ export default function CustomerDashboard({
       {/* Full-screen map */}
       <div className="customer-map">
         <GoogleRideMap
-          pickup={pickup}
+          pickup={mapPickup}
           destination={destination}
           route={route}
+          driver={liveDriver}
         />
+
+        {liveTracking && !route && (
+          <div className="live-track-chip" aria-live="polite">
+            <span className={`live-track-dot ${liveTracking.location && !liveTracking.location.stale ? 'is-live' : ''}`} aria-hidden="true" />
+            <span className="live-track-copy">
+              <strong>
+                {liveTracking.status === 'ONGOING'
+                  ? `On the way in your ${liveTracking.vehicleType === 'AUTO' ? 'auto' : 'car'}`
+                  : `${liveTracking.driver.name || 'Your driver'} is coming to pick you up`}
+              </strong>
+              <small>
+                {[liveTracking.driver.vehicleModel, liveTracking.driver.vehicleNumber].filter(Boolean).join(' · ')}
+                {!liveTracking.location
+                  ? ' · Waiting for driver location'
+                  : liveTracking.location.stale
+                    ? ' · Location not updated recently'
+                    : ''}
+              </small>
+            </span>
+          </div>
+        )}
 
         {route && (
           <div className="map-route-chip" aria-live="polite">
@@ -1127,8 +1190,16 @@ export default function CustomerDashboard({
                               <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="7" r="3.5" fill="currentColor" /><path d="M3.5 17c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5" fill="currentColor" /></svg>
                             </span>
                             <div>
-                              <strong>Your driver is on the way</strong>
-                              <span>Driver details will appear here</span>
+                              <strong>
+                                {liveTracking?.bookingId === ride.id && liveTracking.driver.name
+                                  ? `${liveTracking.driver.name} is on the way`
+                                  : 'Your driver is on the way'}
+                              </strong>
+                              <span>
+                                {liveTracking?.bookingId === ride.id
+                                  ? [liveTracking.driver.vehicleModel, liveTracking.driver.vehicleNumber].filter(Boolean).join(' · ') || 'Track them live on the map'
+                                  : 'Track them live on the map'}
+                              </span>
                             </div>
                           </div>
                         )}

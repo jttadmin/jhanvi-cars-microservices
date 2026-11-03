@@ -23,6 +23,9 @@ import {
 import {
   getDriverByUserId
 } from "../clients/driverVehicle.client";
+import {
+  buildRideTracking
+} from "../services/rideTracking";
 export class BookingController {
 
   constructor(
@@ -299,6 +302,35 @@ export class BookingController {
       }
 
       return res.json(booking);
+    };
+
+  /** GET /bookings/:id/tracking: the driver's live position for this ride. */
+  getRideTracking =
+    async (
+      req: Request,
+      res: Response
+    ) => {
+      const booking =
+        await this.service
+          .getBookingById(String(req.params.id));
+
+      // Only the customer who booked (or an admin) can follow the ride.
+      if (
+        !booking ||
+        (
+          !req.internalService &&
+          req.auth?.role !== "ADMIN" &&
+          booking.userId !== req.auth?.id
+        )
+      ) {
+        return res
+          .status(404)
+          .json({ message: "Booking not found" });
+      }
+
+      return res.json(
+        await buildRideTracking(booking)
+      );
     };
 
   createBooking =
