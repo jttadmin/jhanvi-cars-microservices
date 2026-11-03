@@ -183,10 +183,33 @@ export default function CustomerDashboard({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [cancellingRideId, setCancellingRideId] = useState<string | null>(null);
 
+  // Latest selections, so a re-mounted form can show them again.
+  const pickupRef = useRef<LocationPoint | null>(null);
+  const destinationRef = useRef<LocationPoint | null>(null);
   useEffect(() => {
+    pickupRef.current = pickup;
+    destinationRef.current = destination;
+  }, [pickup, destination]);
+
+  /*
+   * The location inputs only exist while the "Get a ride" panel is shown.
+   * Switching to Activity (e.g. after booking) unmounts them, so Places
+   * autocomplete must be attached again to the new inputs each time the
+   * ride panel comes back.
+   */
+  useEffect(() => {
+    if (panelView !== 'ride') return;
+
     let pickupAutocomplete: google.maps.places.Autocomplete | undefined;
     let destAutocomplete: google.maps.places.Autocomplete | undefined;
     let cancelled = false;
+
+    if (pickupInputRef.current && !pickupInputRef.current.value) {
+      pickupInputRef.current.value = pickupRef.current?.address ?? '';
+    }
+    if (destInputRef.current && !destInputRef.current.value) {
+      destInputRef.current.value = destinationRef.current?.address ?? '';
+    }
 
     loadGoogleMaps()
       .then(async () => {
@@ -198,6 +221,8 @@ export default function CustomerDashboard({
             setPickup,
           );
         }
+
+        if (cancelled) return;
 
         if (destInputRef.current) {
           destAutocomplete = await attachAutocomplete(
@@ -221,7 +246,7 @@ export default function CustomerDashboard({
         google.maps.event.clearInstanceListeners(destAutocomplete);
       }
     };
-  }, []);
+  }, [panelView]);
 
   useEffect(() => {
     if (!pickup || !destination) {
