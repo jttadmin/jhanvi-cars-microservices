@@ -418,6 +418,51 @@ export async function getDriverByUserId(
   );
 }
 
+export interface DriverPosition {
+  name: string;
+  vehicleNumber: string;
+  vehicleModel?: string | null;
+  vehicleType?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  lastLocationAt: string | null;
+}
+
+/** The assigned driver's last reported position, for live tracking. */
+export async function getDriverPosition(
+  driverId: string
+): Promise<DriverPosition | null> {
+  const driverBaseUrl =
+    process.env.DRIVER_SERVICE_URL ??
+    "http://localhost:3003";
+
+  const driver = await getJson(
+    `${driverBaseUrl}/drivers/${encodeURIComponent(driverId)}`,
+    "Driver Service"
+  );
+
+  if (!driver) {
+    return null;
+  }
+
+  const num = (v: unknown) =>
+    v === null || v === undefined || v === "" || !Number.isFinite(Number(v))
+      ? null
+      : Number(v);
+
+  return {
+    name: String(driver.name ?? ""),
+    vehicleNumber: String(driver.vehicleNumber ?? ""),
+    vehicleModel: driver.vehicleModel ?? null,
+    vehicleType: driver.vehicleType ?? null,
+    latitude: num(driver.latitude),
+    longitude: num(driver.longitude),
+    lastLocationAt: driver.lastLocationAt
+      ? new Date(driver.lastLocationAt).toISOString()
+      : null,
+  };
+}
+
 export interface NearbyDriver {
   driverId: string;
   distanceKm: number;

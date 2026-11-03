@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps, onMapsAuthFailure } from '../api/googleMaps';
 import type { LocationPoint, RouteResult } from '../types';
+import type { RideType } from '../utils/fare';
+import { bearing, vehicleMarkerIcon } from '../utils/mapIcons';
+
+export interface LiveDriver {
+  lat: number;
+  lng: number;
+  /** Booked category: an auto icon for AUTO, a car for the rest. */
+  vehicleType: RideType | null;
+}
 
 interface GoogleRideMapProps {
   pickup: LocationPoint | null;
   destination: LocationPoint | null;
   route: RouteResult | null;
+  /** The assigned driver's live position during a ride. */
+  driver?: LiveDriver | null;
 }
+
+const GLIDE_MS = 1200;
 
 const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 }; // fallback until a pickup point is set
 
@@ -31,12 +44,17 @@ const MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
 ];
 
-export default function GoogleRideMap({ pickup, destination, route }: GoogleRideMapProps) {
+export default function GoogleRideMap({ pickup, destination, route, driver = null }: GoogleRideMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const pickupMarkerRef = useRef<google.maps.Marker | null>(null);
   const destMarkerRef = useRef<google.maps.Marker | null>(null);
   const routeLineRef = useRef<google.maps.Polyline | null>(null);
+  const driverMarkerRef = useRef<google.maps.Marker | null>(null);
+  const driverPosRef = useRef<{ lat: number; lng: number } | null>(null);
+  const headingRef = useRef(0);
+  const glideRef = useRef<number | null>(null);
+  const zoomedToDriverRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -147,6 +165,84 @@ export default function GoogleRideMap({ pickup, destination, route }: GoogleRide
         : { top: 40, right: 40, bottom: 40, left: 40 },
     );
   }, [route]);
+
+  // Live driver marker: glides between GPS fixes, faces where it's heading,
+  // and the map follows it while no new trip is being planned.
+  const driverLat = driver?.lat;
+  const driverLng = driver?.lng;
+  const driverType = driver?.vehicleType ?? null;
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+
+    if (driverLat === undefined || driverLng === undefined) {
+      if (glideRef.current) cancelAnimationFrame(glideRef.current);
+      driverMarkerRef.current?.setMap(null);
+      driverMarkerRef.current = null;
+      driverPosRef.current = null;
+      zoomedToDriverRef.current = false;
+      return;
+    }
+
+    const target = { lat: driverLat, lng: driverLng };
+    const from = driverPosRef.current;
+
+    if (from) {
+      // Only turn for real movement (> ~5 m), not GPS jitter.
+      const moved = Math.hypot(target.lat - from.lat, target.lng - from.lng);
+      if (moved > 0.00005) headingRef.current = bearing(from, target);
+    }
+
+    if (!driverMarkerRef.current) {
+      driverMarkerRef.current = new google.maps.Marker({
+        map,
+        position: target,
+        zIndex: 1000,
+        optimized: false,
+        title: driverType === 'AUTO' ? 'Your auto' : 'Your car',
+      });
+    }
+    driverMarkerRef.current.setIcon(vehicleMarkerIcon(driverType, headingRef.current));
+
+    const follow = !route;
+    if (follow) {
+      if (!zoomedToDriverRef.current) {
+        map.setZoom(16);
+        zoomedToDriverRef.current = true;
+      }
+      map.panTo(target);
+    }
+
+    if (glideRef.current) cancelAnimationFrame(glideRef.current);
+
+    if (!from) {
+      driverMarkerRef.current.setPosition(target);
+      driverPosRef.current = target;
+      return;
+    }
+
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / GLIDE_MS);
+      const ease = t * (2 - t);
+      const pos = {
+        lat: from.lat + (target.lat - from.lat) * ease,
+        lng: from.lng + (target.lng - from.lng) * ease,
+      };
+      driverMarkerRef.current?.setPosition(pos);
+      driverPosRef.current = pos;
+      if (t < 1) glideRef.current = requestAnimationFrame(step);
+    };
+    glideRef.current = requestAnimationFrame(step);
+  }, [ready, driverLat, driverLng, driverType, route]);
+
+  useEffect(
+    () => () => {
+      if (glideRef.current) cancelAnimationFrame(glideRef.current);
+    },
+    [],
+  );
 
   return (
     <div className="ride-map-wrap">
