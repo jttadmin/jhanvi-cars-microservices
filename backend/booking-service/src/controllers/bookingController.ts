@@ -341,15 +341,24 @@ export class BookingController {
 
       const booking =
         await this.service
-          .createBooking({
+          .createBooking(
+            {
+              id:
+                randomUUID(),
 
-            id:
-              randomUUID(),
+              ...result.data,
 
-            ...result.data,
+              fare:
+                result.data.fare ?? 0,
 
-            userId
-          });
+              userId
+            },
+            {
+              trustClientFare:
+                req.internalService === true ||
+                req.auth?.role === "ADMIN"
+            }
+          );
 
       return res
         .status(201)
@@ -513,7 +522,11 @@ export class BookingController {
           : {
               ...result.data,
               userId: existing.userId,
-              driverId: existing.driverId
+              driverId: existing.driverId,
+              // Customers can't change what they pay.
+              fare: existing.fare,
+              distanceKm: existing.distanceKm ?? null,
+              vehicleType: existing.vehicleType
             };
 
       const booking =

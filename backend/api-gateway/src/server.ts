@@ -175,6 +175,21 @@ app.use(
 );
 
 /*
+ * Public, read-only fare rates so prices show before a customer logs in.
+ * Registered ahead of the authenticated /bookings proxy below.
+ */
+app.use(
+  createProxyMiddleware({
+    target: BOOKING_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: (path, req) =>
+      req.method === "GET" && path.split("?")[0] === "/bookings/fare-rules",
+    proxyTimeout: PROXY_TIMEOUT_MS,
+    timeout: PROXY_TIMEOUT_MS,
+  })
+);
+
+/*
 
 * BOOKING SERVICE
 * ============================================================

@@ -10,6 +10,8 @@ import {
   BookingRepository
 } from "../repositories/bookingRepository";
 
+import { FareService } from "./fareService";
+
 import {
   validateDriverAndVehicle,
   validateDriverAndVehicleForAssignment,
@@ -37,8 +39,50 @@ import { BookingError } from "../errors/BookingError";
 
 export class BookingService {
   constructor(
-    private repository: BookingRepository
+    private repository: BookingRepository,
+    private fareService?: FareService
   ) {}
+
+  /*
+   * The fare always comes from the admin-managed fare rules, never from
+   * the client: minimum fare + per-km beyond the minimum distance, night
+   * surcharge and GST for the booked category and pickup time.
+   */
+  private async priceBooking(
+    booking: Booking,
+    trustClientFare: boolean
+  ): Promise<Pick<Booking, "fare" | "distanceKm">> {
+    // Internal services and admins may still book at an explicit fare
+    // (e.g. smoke tests, manual corporate bookings) when no distance is given.
+    const explicitFare =
+      trustClientFare &&
+      booking.distanceKm == null &&
+      typeof booking.fare === "number";
+
+    if (!this.fareService || explicitFare) {
+      return { fare: booking.fare, distanceKm: booking.distanceKm ?? null };
+    }
+
+    if (!booking.vehicleType) {
+      throw new BookingError(400, "vehicleType is required", "VEHICLE_TYPE_REQUIRED");
+    }
+
+    if (!(Number(booking.distanceKm) > 0)) {
+      throw new BookingError(
+        400,
+        "distanceKm is required to calculate the fare",
+        "DISTANCE_REQUIRED"
+      );
+    }
+
+    const quote = await this.fareService.quote(
+      booking.vehicleType,
+      Number(booking.distanceKm),
+      new Date(booking.scheduledAt)
+    );
+
+    return { fare: quote.total, distanceKm: quote.distanceKm };
+  }
 
   private async sendNotificationSafely(
     action: string,
@@ -161,13 +205,17 @@ export class BookingService {
     return this.repository.getDriverEarnings(driverId);
   }
 
-  async createBooking(booking: Booking): Promise<Booking> {
+  async createBooking(
+    booking: Booking,
+    options: { trustClientFare?: boolean } = {}
+  ): Promise<Booking> {
     if (booking.driverId) {
       await validateDriverAndVehicle(booking.driverId);
     }
 
     const createdBooking = await this.repository.create({
       ...booking,
+      ...(await this.priceBooking(booking, options.trustClientFare === true)),
       status: "PENDING",
       startOtp: generateStartOtp()
     });
@@ -238,6 +286,7 @@ export class BookingService {
     return this.repository.update(id, {
       id,
       ...data,
+      distanceKm: data.distanceKm ?? existing.distanceKm ?? null,
       status: existing.status
     });
   }
