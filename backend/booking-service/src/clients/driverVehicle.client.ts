@@ -75,7 +75,8 @@ async function getJson(
 async function patchJson(
   url: string,
   body: unknown,
-  serviceName: string
+  serviceName: string,
+  tolerateConflictCodes: string[] = []
 ): Promise<any> {
   let response: Response;
 
@@ -94,6 +95,22 @@ async function patchJson(
 
   if (response.status === 404) {
     return null;
+  }
+
+  if (response.status === 409) {
+    const errorBody = await response
+      .json()
+      .catch(() => ({} as any));
+
+    if (tolerateConflictCodes.includes(errorBody?.code)) {
+      return null;
+    }
+
+    throw new BookingError(
+      409,
+      errorBody?.message ??
+        `${serviceName} returned HTTP 409`
+    );
   }
 
   if (!response.ok) {
@@ -345,10 +362,15 @@ export async function syncDriverVehicleForBooking(
     );
 
     try {
+      // If the driver is offline or still holds another accepted ride,
+      // driver-service refuses to mark them available. The trip itself
+      // is still over, so leave the driver unavailable instead of
+      // blocking completion; they can go available again from the app.
       await patchJson(
         `${driverBaseUrl}/drivers/${encodeURIComponent(driver.id)}/status`,
         { isAvailable: true },
-        "Driver Service"
+        "Driver Service",
+        ["DRIVER_AVAILABILITY_CONFLICT"]
       );
     } catch (error) {
       // Try to avoid leaving the vehicle available
