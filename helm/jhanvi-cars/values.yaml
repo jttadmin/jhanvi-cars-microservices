@@ -20,7 +20,7 @@ images:
 
   bookingService:
     repository: jhanviadmin/jhanvi-cars-booking-service
-    tag: "sha-0410fc2"
+    tag: "sha-539d5d6"
 
   vehicleService:
     repository: jhanviadmin/jhanvi-cars-vehicle-service
@@ -50,7 +50,7 @@ images:
       tag: "sha-0410fc2"
     booking:
       repository: jhanviadmin/jhanvi-cars-booking-service-migration
-      tag: "sha-0410fc2"
+      tag: "sha-539d5d6"
     vehicle:
       repository: jhanviadmin/jhanvi-cars-vehicle-service-migration
       tag: "sha-0410fc2"
