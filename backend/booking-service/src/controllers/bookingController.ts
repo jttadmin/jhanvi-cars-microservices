@@ -98,9 +98,11 @@ export class BookingController {
 
 
       return res.json(
-        bookings.filter(
-          booking =>
-            booking.userId === userId
+        await this.service.withStartOtpForCustomer(
+          bookings.filter(
+            booking =>
+              booking.userId === userId
+          )
         )
       );
     };
@@ -281,6 +283,19 @@ export class BookingController {
             message:
               "Booking not found"
           });
+      }
+
+      // Only the booking's own customer gets the start-ride OTP.
+      if (
+        !req.internalService &&
+        req.auth?.role === "CUSTOMER" &&
+        booking.userId === req.auth?.id
+      ) {
+        const [withOtp] =
+          await this.service
+            .withStartOtpForCustomer([booking]);
+
+        return res.json(withOtp);
       }
 
       return res.json(booking);
@@ -912,6 +927,12 @@ export class BookingController {
               "Booking is assigned to another driver"
           });
       }
+
+      // The customer reads this code to the driver at pickup.
+      await this.service.verifyStartOtp(
+        id,
+        req.body?.otp
+      );
 
       const updated =
         await this.service

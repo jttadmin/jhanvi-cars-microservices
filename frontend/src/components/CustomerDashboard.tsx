@@ -1098,6 +1098,18 @@ export default function CustomerDashboard({
                           </div>
                         )}
 
+                        {ride.status === 'CONFIRMED' && ride.driverId && ride.startOtp && (
+                          <div className="ride-otp-card">
+                            <div>
+                              <strong>Ride OTP</strong>
+                              <span>Share this with your driver at pickup to start the ride</span>
+                            </div>
+                            <span className="ride-otp-code" aria-label={`Ride OTP ${ride.startOtp.split('').join(' ')}`}>
+                              {ride.startOtp}
+                            </span>
+                          </div>
+                        )}
+
                         {ride.status === 'PENDING' && (
                           <button
                             type="button"

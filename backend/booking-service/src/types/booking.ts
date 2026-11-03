@@ -17,4 +17,6 @@ export interface Booking {
   status: BookingStatus;
   fare: number;
   vehicleType?: "AUTO" | "ECONOMY" | "COMFORT" | "COMFORT_PLUS";
+  /** Start-ride code. Only included in responses to the booking's customer. */
+  startOtp?: string | null;
 }

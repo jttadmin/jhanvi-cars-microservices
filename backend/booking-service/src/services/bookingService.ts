@@ -1,4 +1,6 @@
 
+import { randomInt } from "crypto";
+
 import {
   Booking,
   BookingStatus
@@ -66,6 +68,84 @@ export class BookingService {
     return this.repository.findById(id);
   }
 
+  /*
+   * Adds the start-ride OTP to bookings the customer still needs it for.
+   * Only call this for responses going to the booking's own customer.
+   */
+  async withStartOtpForCustomer(
+    bookings: Booking[]
+  ): Promise<Booking[]> {
+    const needsOtp = bookings.filter((b) =>
+      OTP_VISIBLE_STATUSES.includes(b.status)
+    );
+
+    const otps = await this.repository.getStartOtps(
+      needsOtp.map((b) => b.id)
+    );
+
+    // Bookings created before OTPs existed get one the first time
+    // the customer looks at them.
+    for (const booking of needsOtp) {
+      if (!otps.has(booking.id)) {
+        const otp = generateStartOtp();
+        await this.repository.setStartOtp(booking.id, otp);
+        otps.set(booking.id, otp);
+      }
+    }
+
+    return bookings.map((b) =>
+      otps.has(b.id) && OTP_VISIBLE_STATUSES.includes(b.status)
+        ? { ...b, startOtp: otps.get(b.id) }
+        : b
+    );
+  }
+
+  async verifyStartOtp(
+    bookingId: string,
+    otp: unknown
+  ): Promise<void> {
+    if (typeof otp !== "string" || !/^\d{4}$/.test(otp.trim())) {
+      throw new BookingError(
+        400,
+        "Enter the 4-digit OTP from the customer",
+        "START_OTP_REQUIRED"
+      );
+    }
+
+    const result = await this.repository.checkStartOtp(
+      bookingId,
+      otp.trim(),
+      MAX_START_OTP_ATTEMPTS,
+      generateStartOtp
+    );
+
+    if (result === "OK") {
+      return;
+    }
+
+    if (result === "MISSING") {
+      throw new BookingError(
+        409,
+        "The customer has no OTP yet. Ask them to open their ride in the app, then try again.",
+        "START_OTP_MISSING"
+      );
+    }
+
+    if (result === "ROTATED") {
+      throw new BookingError(
+        400,
+        "Too many wrong attempts. A new OTP has been sent to the customer's app. Ask them for the new code.",
+        "START_OTP_ROTATED"
+      );
+    }
+
+    throw new BookingError(
+      400,
+      "Incorrect OTP. Check the code with the customer.",
+      "START_OTP_INVALID"
+    );
+  }
+
   async getBookingsByDriverId(driverId: string): Promise<Booking[]> {
     return this.repository.findByDriverId(driverId);
   }
@@ -88,7 +168,8 @@ export class BookingService {
 
     const createdBooking = await this.repository.create({
       ...booking,
-      status: "PENDING"
+      status: "PENDING",
+      startOtp: generateStartOtp()
     });
 
     if (
@@ -389,4 +470,12 @@ export class BookingService {
 
     return updatedBooking;
   }
+}
+
+const MAX_START_OTP_ATTEMPTS = 5;
+
+const OTP_VISIBLE_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED"];
+
+function generateStartOtp(): string {
+  return randomInt(0, 10000).toString().padStart(4, "0");
 }
