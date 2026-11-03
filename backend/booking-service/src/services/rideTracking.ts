@@ -16,6 +16,7 @@ export interface RideTracking {
   /** Booked category: decides the auto or car icon on the map. */
   vehicleType: Booking["vehicleType"] | null;
   pickup: { lat: number; lng: number } | null;
+  dropoff: { lat: number; lng: number } | null;
   driver: {
     name: string;
     vehicleNumber: string;
@@ -71,6 +72,10 @@ export async function buildRideTracking(
     pickup:
       booking.pickupLatitude != null && booking.pickupLongitude != null
         ? { lat: booking.pickupLatitude, lng: booking.pickupLongitude }
+        : null,
+    dropoff:
+      booking.dropoffLatitude != null && booking.dropoffLongitude != null
+        ? { lat: booking.dropoffLatitude, lng: booking.dropoffLongitude }
         : null,
     driver: {
       name: position.name,

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadGoogleMaps, onMapsAuthFailure } from '../api/googleMaps';
 import type { LocationPoint, RouteResult } from '../types';
 import type { RideType } from '../utils/fare';
-import { bearing, vehicleMarkerIcon } from '../utils/mapIcons';
+import { vehicleMarkerIcon } from '../utils/mapIcons';
+import { bearing, distanceM, snapToPath } from '../utils/geo';
 
 export interface LiveDriver {
   lat: number;
@@ -17,6 +18,8 @@ interface GoogleRideMapProps {
   route: RouteResult | null;
   /** The assigned driver's live position during a ride. */
   driver?: LiveDriver | null;
+  /** Encoded road path from the driver to the pickup or drop-off. */
+  driverPath?: string | null;
 }
 
 const GLIDE_MS = 1200;
@@ -44,7 +47,7 @@ const MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
 ];
 
-export default function GoogleRideMap({ pickup, destination, route, driver = null }: GoogleRideMapProps) {
+export default function GoogleRideMap({ pickup, destination, route, driver = null, driverPath = null }: GoogleRideMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const pickupMarkerRef = useRef<google.maps.Marker | null>(null);
@@ -55,9 +58,13 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
   const headingRef = useRef(0);
   const glideRef = useRef<number | null>(null);
   const zoomedToDriverRef = useRef(false);
+  const tripLineRef = useRef<google.maps.Polyline | null>(null);
+  const fittedTripRef = useRef<string | null>(null);
 
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+
+  const isTracking = driver != null;
 
   // Init map once.
   useEffect(() => {
@@ -110,8 +117,9 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
       });
     }
     pickupMarkerRef.current.setPosition({ lat: pickup.lat, lng: pickup.lng });
-    if (!destination) mapRef.current.panTo({ lat: pickup.lat, lng: pickup.lng });
-  }, [pickup, destination]);
+    // While a vehicle is being tracked, the tracking camera decides the view.
+    if (!destination && !isTracking) mapRef.current.panTo({ lat: pickup.lat, lng: pickup.lng });
+  }, [pickup, destination, isTracking]);
 
   // Destination marker.
   useEffect(() => {
@@ -166,11 +174,20 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
     );
   }, [route]);
 
-  // Live driver marker: glides between GPS fixes, faces where it's heading,
-  // and the map follows it while no new trip is being planned.
+  // Live driver marker, Uber-style:
+  // - snapped onto the road line to the pickup/drop-off and facing along it,
+  // - glides between GPS fixes,
+  // - the road line behind the vehicle is trimmed away,
+  // - the camera fits the whole trip once, then only follows the vehicle
+  //   when it is about to leave the screen.
   const driverLat = driver?.lat;
   const driverLng = driver?.lng;
   const driverType = driver?.vehicleType ?? null;
+
+  const tripPath = useMemo(
+    () => (ready && driverPath ? google.maps.geometry.encoding.decodePath(driverPath).map((p) => ({ lat: p.lat(), lng: p.lng() })) : []),
+    [ready, driverPath],
+  );
 
   useEffect(() => {
     const map = mapRef.current;
@@ -180,18 +197,24 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
       if (glideRef.current) cancelAnimationFrame(glideRef.current);
       driverMarkerRef.current?.setMap(null);
       driverMarkerRef.current = null;
+      tripLineRef.current?.setMap(null);
+      tripLineRef.current = null;
       driverPosRef.current = null;
       zoomedToDriverRef.current = false;
+      fittedTripRef.current = null;
       return;
     }
 
-    const target = { lat: driverLat, lng: driverLng };
+    const raw = { lat: driverLat, lng: driverLng };
+    const snapped = tripPath.length > 1 ? snapToPath(raw, tripPath) : null;
+    const target = snapped ? snapped.point : raw;
     const from = driverPosRef.current;
 
-    if (from) {
-      // Only turn for real movement (> ~5 m), not GPS jitter.
-      const moved = Math.hypot(target.lat - from.lat, target.lng - from.lng);
-      if (moved > 0.00005) headingRef.current = bearing(from, target);
+    if (snapped) {
+      headingRef.current = snapped.heading;
+    } else if (from && distanceM(from, target) > 5) {
+      // Off the planned road: face the way it's actually moving, ignoring jitter.
+      headingRef.current = bearing(from, target);
     }
 
     if (!driverMarkerRef.current) {
@@ -205,13 +228,47 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
     }
     driverMarkerRef.current.setIcon(vehicleMarkerIcon(driverType, headingRef.current));
 
-    const follow = !route;
-    if (follow) {
-      if (!zoomedToDriverRef.current) {
-        map.setZoom(16);
-        zoomedToDriverRef.current = true;
+    // Road line still ahead of the vehicle.
+    if (tripPath.length > 1) {
+      const ahead = snapped ? [snapped.point, ...tripPath.slice(snapped.index + 1)] : tripPath;
+      if (!tripLineRef.current) {
+        tripLineRef.current = new google.maps.Polyline({
+          map,
+          strokeColor: '#000000',
+          strokeWeight: 5,
+          strokeOpacity: 0.9,
+          zIndex: 10,
+        });
       }
-      map.panTo(target);
+      tripLineRef.current.setPath(ahead);
+    } else {
+      tripLineRef.current?.setMap(null);
+      tripLineRef.current = null;
+    }
+
+    // Camera: leave it alone while the customer plans a new trip.
+    if (!route) {
+      if (tripPath.length > 1 && fittedTripRef.current !== driverPath) {
+        const bounds = new google.maps.LatLngBounds();
+        tripPath.forEach((pt) => bounds.extend(pt));
+        bounds.extend(target);
+        const desktop = window.matchMedia('(min-width: 768px)').matches;
+        map.fitBounds(
+          bounds,
+          desktop
+            ? { top: 100, right: 80, bottom: 80, left: 480 }
+            : { top: 90, right: 40, bottom: 320, left: 40 },
+        );
+        fittedTripRef.current = driverPath ?? null;
+        zoomedToDriverRef.current = true;
+      } else if (tripPath.length < 2 && !zoomedToDriverRef.current) {
+        map.setZoom(16);
+        map.panTo(target);
+        zoomedToDriverRef.current = true;
+      } else {
+        const view = map.getBounds();
+        if (view && !view.contains(target)) map.panTo(target);
+      }
     }
 
     if (glideRef.current) cancelAnimationFrame(glideRef.current);
@@ -235,11 +292,12 @@ export default function GoogleRideMap({ pickup, destination, route, driver = nul
       if (t < 1) glideRef.current = requestAnimationFrame(step);
     };
     glideRef.current = requestAnimationFrame(step);
-  }, [ready, driverLat, driverLng, driverType, route]);
+  }, [ready, driverLat, driverLng, driverType, route, tripPath, driverPath]);
 
   useEffect(
     () => () => {
       if (glideRef.current) cancelAnimationFrame(glideRef.current);
+      tripLineRef.current?.setMap(null);
     },
     [],
   );

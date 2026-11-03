@@ -5,6 +5,8 @@ import type { RideType } from '../utils/fare';
 export async function createBooking(input: {
   pickupLocation: string;
   dropoffLocation: string;
+  dropoffLatitude?: number;
+  dropoffLongitude?: number;
   /** Trip distance; the server works out the fare from it. */
   distanceKm: number;
   scheduledAt: string;
@@ -122,6 +124,7 @@ export interface RideTracking {
   status: Booking['status'];
   vehicleType: RideType | null;
   pickup: { lat: number; lng: number } | null;
+  dropoff: { lat: number; lng: number } | null;
   driver: { name: string; vehicleNumber: string; vehicleModel: string | null };
   location: { lat: number; lng: number; updatedAt: string | null; stale: boolean } | null;
 }

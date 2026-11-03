@@ -42,6 +42,18 @@ export class BookingRepository {
       dropoffLocation:
         row.dropoff_location,
 
+      dropoffLatitude:
+        row.dropoff_latitude === null ||
+        row.dropoff_latitude === undefined
+          ? null
+          : Number(row.dropoff_latitude),
+
+      dropoffLongitude:
+        row.dropoff_longitude === null ||
+        row.dropoff_longitude === undefined
+          ? null
+          : Number(row.dropoff_longitude),
+
       scheduledAt:
         new Date(
           row.scheduled_at
@@ -192,6 +204,12 @@ export class BookingRepository {
           dropoff_location:
             booking.dropoffLocation,
 
+          dropoff_latitude:
+            booking.dropoffLatitude ?? null,
+
+          dropoff_longitude:
+            booking.dropoffLongitude ?? null,
+
           scheduled_at:
             booking.scheduledAt,
 
@@ -244,6 +262,12 @@ export class BookingRepository {
 
           dropoff_location:
             booking.dropoffLocation,
+
+          dropoff_latitude:
+            booking.dropoffLatitude ?? null,
+
+          dropoff_longitude:
+            booking.dropoffLongitude ?? null,
 
           scheduled_at:
             booking.scheduledAt,
