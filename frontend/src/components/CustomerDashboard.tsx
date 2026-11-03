@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import BrandMark from './BrandMark';
 import { RideIcon } from './RideIcons';
 import GoogleRideMap, { type LiveDriver } from './GoogleRideMap';
@@ -15,6 +15,7 @@ import {
 } from '../utils/razorpay';
 import { DEFAULT_FARE_RULES, estimateFare, rulesByType, type FareRule, type RideType } from '../utils/fare';
 import { getFareRules } from '../api/fares';
+import { useTripEta } from '../hooks/useTripEta';
 import { formatStatus } from '../utils/format';
 import { ApiError } from '../api/client';
 import { updateProfile } from '../api/auth';
@@ -480,6 +481,8 @@ export default function CustomerDashboard({
       const createdBooking = await createBooking({
         pickupLocation: pickup.address,
         dropoffLocation: destination.address,
+        dropoffLatitude: destination.lat,
+        dropoffLongitude: destination.lng,
         distanceKm: Math.round(route.distanceKm * 100) / 100,
         scheduledAt: new Date().toISOString(),
         vehicleType: rideType,
@@ -728,12 +731,31 @@ export default function CustomerDashboard({
   const liveDriver: LiveDriver | null = liveTracking?.location
     ? { lat: liveTracking.location.lat, lng: liveTracking.location.lng, vehicleType: liveTracking.vehicleType }
     : null;
-  // Show the pickup point while the driver is on the way, unless a new trip is being planned.
-  const mapPickup: LocationPoint | null =
-    pickup ??
-    (liveTracking?.status === 'CONFIRMED' && liveTracking.pickup
-      ? { ...liveTracking.pickup, address: liveRide?.pickupLocation ?? '' }
-      : null);
+  const tripEta = useTripEta(liveTracking, liveRide);
+  // While no new trip is being planned, pin where the vehicle is heading:
+  // the pickup before the ride, the drop-off during it.
+  const planning = Boolean(pickup || destination);
+  const etaLat = tripEta?.target.lat;
+  const etaLng = tripEta?.target.lng;
+  const etaPhase = tripEta?.phase;
+  const livePickupAddress = liveRide?.pickupLocation ?? '';
+  const liveDropoffAddress = liveRide?.dropoffLocation ?? '';
+  const mapPickup = useMemo<LocationPoint | null>(
+    () =>
+      pickup ??
+      (!planning && etaPhase === 'TO_PICKUP' && etaLat !== undefined && etaLng !== undefined
+        ? { address: livePickupAddress, lat: etaLat, lng: etaLng }
+        : null),
+    [pickup, planning, etaPhase, etaLat, etaLng, livePickupAddress],
+  );
+  const mapDestination = useMemo<LocationPoint | null>(
+    () =>
+      destination ??
+      (!planning && etaPhase === 'TO_DROPOFF' && etaLat !== undefined && etaLng !== undefined
+        ? { address: liveDropoffAddress, lat: etaLat, lng: etaLng }
+        : null),
+    [destination, planning, etaPhase, etaLat, etaLng, liveDropoffAddress],
+  );
   const initial = (user?.name || 'C').slice(0, 1).toUpperCase();
 
   const openActivity = (history: boolean) => {
@@ -748,19 +770,33 @@ export default function CustomerDashboard({
       <div className="customer-map">
         <GoogleRideMap
           pickup={mapPickup}
-          destination={destination}
+          destination={mapDestination}
           route={route}
           driver={liveDriver}
+          driverPath={!planning ? tripEta?.polyline ?? null : null}
         />
 
         {liveTracking && !route && (
           <div className="live-track-chip" aria-live="polite">
-            <span className={`live-track-dot ${liveTracking.location && !liveTracking.location.stale ? 'is-live' : ''}`} aria-hidden="true" />
+            {tripEta ? (
+              <span className="live-track-eta">
+                <b>{Math.max(1, tripEta.durationMin)}</b>
+                <small>min</small>
+              </span>
+            ) : (
+              <span className={`live-track-dot ${liveTracking.location && !liveTracking.location.stale ? 'is-live' : ''}`} aria-hidden="true" />
+            )}
             <span className="live-track-copy">
               <strong>
                 {liveTracking.status === 'ONGOING'
-                  ? `On the way in your ${liveTracking.vehicleType === 'AUTO' ? 'auto' : 'car'}`
-                  : `${liveTracking.driver.name || 'Your driver'} is coming to pick you up`}
+                  ? tripEta
+                    ? `Reaching drop-off · ${tripEta.distanceKm} km to go`
+                    : `On the way in your ${liveTracking.vehicleType === 'AUTO' ? 'auto' : 'car'}`
+                  : tripEta
+                    ? tripEta.durationMin <= 1
+                      ? `${liveTracking.driver.name || 'Your driver'} is arriving now`
+                      : `${liveTracking.driver.name || 'Your driver'} is arriving · ${tripEta.distanceKm} km away`
+                    : `${liveTracking.driver.name || 'Your driver'} is coming to pick you up`}
               </strong>
               <small>
                 {[liveTracking.driver.vehicleModel, liveTracking.driver.vehicleNumber].filter(Boolean).join(' · ')}

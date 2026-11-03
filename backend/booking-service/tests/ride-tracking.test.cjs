@@ -16,6 +16,8 @@ const booking = (status, overrides = {}) => ({
   pickupLatitude: 12.975,
   pickupLongitude: 77.606,
   dropoffLocation: "Indiranagar",
+  dropoffLatitude: 12.978,
+  dropoffLongitude: 77.64,
   scheduledAt: "2026-11-03T19:30:00+05:30",
   status,
   fare: 189,
@@ -42,6 +44,7 @@ test("ongoing ride returns the driver's position and the booked category", async
     { lat: 12.97, lng: 77.6, stale: false }
   );
   assert.deepEqual(t.pickup, { lat: 12.975, lng: 77.606 });
+  assert.deepEqual(t.dropoff, { lat: 12.978, lng: 77.64 });
 });
 
 test("only name and vehicle are shared, not contact details", async () => {
@@ -83,4 +86,13 @@ test("tracking is refused before a driver accepts and after the ride ends", asyn
       (e) => e instanceof BookingError && e.code === "TRACKING_UNAVAILABLE"
     );
   }
+});
+
+test("older bookings without drop-off coordinates return dropoff: null", async () => {
+  const t = await buildRideTracking(
+    booking("ONGOING", { dropoffLatitude: null, dropoffLongitude: null }),
+    position(),
+    NOW
+  );
+  assert.equal(t.dropoff, null);
 });

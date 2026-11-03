@@ -127,6 +127,36 @@ export async function computeRoute(
   }
 }
 
+const geocodeCache = new Map<string, Promise<{ lat: number; lng: number } | null>>()
+
+/**
+ * Coordinates for an address, for older bookings saved without them.
+ * Cached per address so each one is looked up only once.
+ */
+export function geocodeAddress(
+  address: string,
+): Promise<{ lat: number; lng: number } | null> {
+  const key = address.trim()
+  if (!key) return Promise.resolve(null)
+
+  let pending = geocodeCache.get(key)
+  if (!pending) {
+    pending = loadGoogleMaps()
+      .then(
+        () =>
+          new Promise<{ lat: number; lng: number } | null>((resolve) => {
+            new google.maps.Geocoder().geocode({ address: key }, (results, status) => {
+              const loc = status === 'OK' ? results?.[0]?.geometry?.location : undefined
+              resolve(loc ? { lat: loc.lat(), lng: loc.lng() } : null)
+            })
+          }),
+      )
+      .catch(() => null)
+    geocodeCache.set(key, pending)
+  }
+  return pending
+}
+
 declare global {
   interface Window {
     gm_authFailure?: () => void

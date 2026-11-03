@@ -13,6 +13,8 @@ export interface Booking {
   pickupLatitude?: number | null;
   pickupLongitude?: number | null;
   dropoffLocation: string;
+  dropoffLatitude?: number | null;
+  dropoffLongitude?: number | null;
   scheduledAt: string;
   status: BookingStatus;
   fare: number;
